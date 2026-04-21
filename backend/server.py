@@ -423,22 +423,35 @@ app.include_router(api_router)
 
 app = FastAPI()
 
-origins = [
-    "http://localhost:3000",
-    "http://localhost:8081",
-    "http://localhost:19006",
-    "https://bi-kazy7hujs-abhikoli17s-projects.vercel.app",
-]
-
-
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:8081",
+        "http://localhost:19006",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+#origins = [
+#    "http://localhost:3000",
+#    "http://localhost:8081",
+#    "http://localhost:19006",
+#    "https://bi-kazy7hujs-abhikoli17s-projects.vercel.app",
+#]
+
+
+# CORS middleware
+#app.add_middleware(
+#    CORSMiddleware,
+#    allow_credentials=True,
+#    allow_origins=["*"],
+#    allow_methods=["*"],
+#    allow_headers=["*"],
+#)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
