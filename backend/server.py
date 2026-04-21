@@ -421,6 +421,16 @@ async def root():
 # Include router
 app.include_router(api_router)
 
+app = FastAPI()
+
+origins = [
+    "http://localhost:3000",
+    "http://localhost:8081",
+    "http://localhost:19006",
+    "https://bi-kazy7hujs-abhikoli17s-projects.vercel.app",
+]
+
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
