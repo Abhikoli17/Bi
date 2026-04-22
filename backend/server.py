@@ -71,59 +71,59 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 # ===== AUTH ENDPOINTS =====
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Hash password
-    hashed_pwd = hash_password(user_data.password)
-    
-    # Create team if team_name provided
-    team_id = None
-    if user_data.team_name:
-        team_doc = {
-            "name": user_data.team_name,
-            "owner_id": "",  # Will update after user creation
-            "member_ids": [],
+    try:
+        existing_user = await db.users.find_one({"email": user_data.email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        hashed_pwd = hash_password(user_data.password)
+
+        team_id = None
+        if user_data.team_name:
+            team_doc = {
+                "name": user_data.team_name,
+                "owner_id": "",
+                "member_ids": [],
+                "created_at": datetime.utcnow()
+            }
+            team_result = await db.teams.insert_one(team_doc)
+            team_id = str(team_result.inserted_id)
+
+        user_doc = {
+            "email": user_data.email,
+            "password_hash": hashed_pwd,
+            "full_name": user_data.full_name,
+            "team_id": team_id,
+            "role": "admin" if team_id else "member",
             "created_at": datetime.utcnow()
         }
-        team_result = await db.teams.insert_one(team_doc)
-        team_id = str(team_result.inserted_id)
-    
-    # Create user
-    user_doc = {
-        "email": user_data.email,
-        "password_hash": hashed_pwd,
-        "full_name": user_data.full_name,
-        "team_id": team_id,
-        "role": "admin" if team_id else "member",
-        "created_at": datetime.utcnow()
-    }
-    
-    result = await db.users.insert_one(user_doc)
-    user_id = str(result.inserted_id)
-    
-    # Update team owner
-    if team_id:
-        await db.teams.update_one(
-            {"_id": ObjectId(team_id)},
-            {"$set": {"owner_id": user_id}, "$push": {"member_ids": user_id}}
+
+        result = await db.users.insert_one(user_doc)
+        user_id = str(result.inserted_id)
+
+        if team_id:
+            await db.teams.update_one(
+                {"_id": ObjectId(team_id)},
+                {"$set": {"owner_id": user_id}, "$push": {"member_ids": user_id}}
+            )
+
+        token = create_access_token({"email": user_data.email, "user_id": user_id})
+
+        user_obj = User(
+            _id=user_id,
+            email=user_data.email,
+            full_name=user_data.full_name,
+            team_id=team_id,
+            role=user_doc["role"],
+            created_at=user_doc["created_at"]
         )
-    
-    # Create token
-    token = create_access_token({"email": user_data.email, "user_id": user_id})
-    
-    user_obj = User(
-        _id=user_id,
-        email=user_data.email,
-        full_name=user_data.full_name,
-        team_id=team_id,
-        role=user_doc["role"],
-        created_at=user_doc["created_at"]
-    )
-    
-    return TokenResponse(access_token=token, user=user_obj)
+
+        return TokenResponse(access_token=token, user=user_obj)
+
+    except Exception as e:
+        logger.exception("Register failed")
+        raise HTTPException(status_code=500, detail=str(e))
+   
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(login_data: UserLogin):
