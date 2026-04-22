@@ -53,7 +53,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return user
 
 # ===== AUTH ENDPOINTS =====
-@api_router.post("auth/register", response_model=TokenResponse)
+@api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
     # Check if user exists
     existing_user = await db.users.find_one({"email": user_data.email})
@@ -109,7 +109,7 @@ async def register(user_data: UserCreate):
     
     return TokenResponse(access_token=token, user=user_obj)
 
-@api_router.post("auth/login", response_model=TokenResponse)
+@api_router.post("/auth/login", response_model=TokenResponse)
 async def login(login_data: UserLogin):
     user = await db.users.find_one({"email": login_data.email})
     if not user:
@@ -132,7 +132,7 @@ async def login(login_data: UserLogin):
     
     return TokenResponse(access_token=token, user=user_obj)
 
-@api_router.get("auth/me", response_model=User)
+@api_router.get("/auth/me", response_model=User)
 async def get_me(current_user: dict = Depends(get_current_user)):
     return User(**current_user)
 
@@ -421,7 +421,6 @@ async def root():
 # Include router
 app.include_router(api_router)
 
-app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
