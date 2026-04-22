@@ -120,10 +120,11 @@ async def register(user_data: UserCreate):
 
         return TokenResponse(access_token=token, user=user_obj)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Register failed")
         raise HTTPException(status_code=500, detail=str(e))
-   
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(login_data: UserLogin):
