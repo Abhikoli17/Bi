@@ -1,7 +1,7 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
-#from starlette.middleware.cors import CORSMiddleware
+
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -436,24 +436,6 @@ async def root():
 
 # Include router
 app.include_router(api_router)
-
-
-#origins = [
-#    "http://localhost:3000",
-#    "http://localhost:8081",
-#    "http://localhost:19006",
-#    "https://bi-kazy7hujs-abhikoli17s-projects.vercel.app",
-#]
-
-
-# CORS middleware
-#app.add_middleware(
-#    CORSMiddleware,
-#    allow_credentials=True,
-#    allow_origins=["*"],
-#    allow_methods=["*"],
-#    allow_headers=["*"],
-#)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
