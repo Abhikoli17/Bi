@@ -29,7 +29,7 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI(title="PowerBI Clone API")
 
 # Create API router
-api_router = APIRouter(prefix="api")
+api_router = APIRouter(prefix="/api")
 
 # Security
 security = HTTPBearer()
