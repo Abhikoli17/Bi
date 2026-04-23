@@ -24,9 +24,11 @@ export default function DatasetsScreen() {
 
   useEffect(() => {
     loadDatasets();
-  }, []);
+  }, [token]);
 
   const loadDatasets = async () => {
+    if (!token) return;
+    
     setLoading(true);
     try {
       const data = await apiCall('/api/datasets', {}, token);
