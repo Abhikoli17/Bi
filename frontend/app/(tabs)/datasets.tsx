@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +15,7 @@ import { router } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
 import { apiCall } from '../../utils/api';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 
 export default function DatasetsScreen() {
   const { token } = useAuthStore();
@@ -41,6 +42,81 @@ export default function DatasetsScreen() {
   };
 
   const handleFileUpload = async () => {
+  if (!token) {
+    Alert.alert("Please login again");
+    return;
+  }
+
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: [
+        "text/csv",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ],
+    });
+
+    if (result.canceled) return;
+
+    const file = result.assets[0];
+    setUploading(true);
+
+    let base64 = "";
+
+    if (Platform.OS === "web") {
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+
+      base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          const data = reader.result as string;
+          resolve(data.split(",")[1]);
+        };
+
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } else {
+          base64 = await FileSystem.readAsStringAsync(file.uri, {
+          encoding: "base64" as any,
+        });
+      
+    }
+
+    const fileType = file.name.toLowerCase().endsWith(".csv")
+      ? "csv"
+      : "xlsx";
+
+    const data = await apiCall(
+      "/api/datasets",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: file.name.replace(/\.(csv|xlsx)$/i, ""),
+          file_data: base64,
+          file_type: fileType,
+        }),
+      },
+      token
+    );
+
+    addDataset(data);
+    Alert.alert("Success", "Dataset uploaded successfully");
+  } catch (error: any) {
+    console.log(error);
+    Alert.alert("Upload Failed", error.message || "Upload failed");
+  } finally {
+    setUploading(false);
+  }
+};
+
+  /*const handleFileUpload = async () => {
+    if (!token) {
+      Alert.alert("Please login again");
+      return;
+    }
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
@@ -49,16 +125,39 @@ export default function DatasetsScreen() {
       if (result.canceled) return;
 
       const file = result.assets[0];
+      let base64 = "";
+      
+      if (Platform.OS === "web"){
+        const response =await fetch(file.uri);
+        const blob = await response.blob();
+
+        base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const data = reader.result as string;
+            resolve(data.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        base64 = await FileSystem.readAsStringAsync(file.uri, {
+          encoding: "base64",
+        });
+      }
       
       setUploading(true);
 
       // Read file as base64
-      const base64 = await FileSystem.readAsStringAsync(file.uri, {
+      //const base64 = await FileSystem.readAsStringAsync(file.uri, {
         encoding: "base64",
-      });
+      //});
+
+      const file = result.assets[0];
 
       // Determine file type
-      const fileType = file.name.endsWith('.csv') ? 'csv' : 'xlsx';
+      const fileType = file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'xlsx';
+      //file.name.toLowerCase().endsWith('.csv')
 
       // Upload to backend
       const data = await apiCall(
@@ -77,11 +176,12 @@ export default function DatasetsScreen() {
       addDataset(data);
       Alert.alert('Success', 'Dataset uploaded successfully');
     } catch (error: any) {
+      //Console.log ("UPLOAD Error:", error);
       Alert.alert('Upload Failed', error.message);
     } finally {
       setUploading(false);
     }
-  };
+  };*/
 
   const renderDataset = ({ item }: any) => (
     <TouchableOpacity
