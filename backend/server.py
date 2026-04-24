@@ -230,6 +230,31 @@ async def delete_dataset(dataset_id: str, current_user: dict = Depends(get_curre
     
     return {"message": "Dataset deleted"}
 
+
+@api_router.put("/datasets/{dataset_id}", response_model=Dataset)
+async def update_dataset(
+    dataset_id: str,
+    update_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    dataset = await db.datasets.find_one({"_id": ObjectId(dataset_id)})
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    if dataset["owner_id"] != current_user["_id"]:
+        raise HTTPException(status_code=403, detail="Only owner can edit dataset")
+
+    await db.datasets.update_one(
+        {"_id": ObjectId(dataset_id)},
+        {"$set": {"data": update_data["data"]}}
+    )
+
+    updated = await db.datasets.find_one({"_id": ObjectId(dataset_id)})
+    updated["_id"] = str(updated["_id"])
+
+    return Dataset(**updated)
+
 # ===== CHART ENDPOINTS =====
 @api_router.post("/charts", response_model=Chart)
 async def create_chart(chart_data: Chart, current_user: dict = Depends(get_current_user)):
