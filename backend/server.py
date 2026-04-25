@@ -215,6 +215,37 @@ async def get_dataset(dataset_id: str, current_user: dict = Depends(get_current_
     dataset["_id"] = str(dataset["_id"])
     return Dataset(**dataset)
 
+@api_router.put("/datasets/{dataset_id}", response_model=Dataset)
+async def update_dataset(
+    dataset_id: str,
+    payload: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    dataset = await db.datasets.find_one({"_id": ObjectId(dataset_id)})
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    if dataset["owner_id"] != current_user["_id"] and dataset.get("team_id") != current_user.get("team_id"):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    update_fields = {
+        "data": payload.get("data", dataset.get("data", [])),
+        "columns": payload.get("columns", dataset.get("columns", [])),
+        "row_count": payload.get("row_count", len(payload.get("data", []))),
+        "updated_at": datetime.utcnow()
+    }
+
+    await db.datasets.update_one(
+        {"_id": ObjectId(dataset_id)},
+        {"$set": update_fields}
+    )
+
+    updated = await db.datasets.find_one({"_id": ObjectId(dataset_id)})
+    updated["_id"] = str(updated["_id"])
+
+    return Dataset(**updated)
+
 @api_router.delete("/datasets/{dataset_id}")
 async def delete_dataset(dataset_id: str, current_user: dict = Depends(get_current_user)):
     dataset = await db.datasets.find_one({"_id": ObjectId(dataset_id)})
