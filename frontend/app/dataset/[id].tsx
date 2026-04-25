@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -19,8 +19,12 @@ export default function DatasetDetailScreen() {
 
   const [dataset, setDataset] = useState<any>(null);
   const [rows, setRows] = useState<any[]>([]);
+  const [columns, setColumns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortAsc, setSortAsc] = useState(true);
 
   useEffect(() => {
     if (id && token) loadDataset();
@@ -31,6 +35,7 @@ export default function DatasetDetailScreen() {
       const data = await apiCall(`/api/datasets/${id}`, {}, token);
       setDataset(data);
       setRows(data.data || []);
+      setColumns(data.columns || []);
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to load dataset");
     } finally {
@@ -38,13 +43,86 @@ export default function DatasetDetailScreen() {
     }
   };
 
+  const filteredRows = useMemo(() => {
+    let result = [...rows];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((row) =>
+        Object.values(row).some((value) =>
+          String(value ?? "").toLowerCase().includes(q)
+        )
+      );
+    }
+
+    if (sortColumn) {
+      result.sort((a, b) => {
+        const av = String(a[sortColumn] ?? "");
+        const bv = String(b[sortColumn] ?? "");
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+    }
+
+    return result;
+  }, [rows, search, sortColumn, sortAsc]);
+
   const updateCell = (rowIndex: number, columnName: string, value: string) => {
+    const actualIndex = rows.indexOf(filteredRows[rowIndex]);
     const updatedRows = [...rows];
-    updatedRows[rowIndex] = {
-      ...updatedRows[rowIndex],
+
+    updatedRows[actualIndex] = {
+      ...updatedRows[actualIndex],
       [columnName]: value,
     };
+
     setRows(updatedRows);
+  };
+
+  const addRow = () => {
+    const newRow: any = {};
+    columns.forEach((col) => {
+      newRow[col.name] = "";
+    });
+    setRows([...rows, newRow]);
+  };
+
+  const deleteRow = (rowIndex: number) => {
+    const actualRow = filteredRows[rowIndex];
+    setRows(rows.filter((row) => row !== actualRow));
+  };
+
+  const addColumn = () => {
+    const name = `Column_${columns.length + 1}`;
+
+    const newColumn = {
+      name,
+      type: "text",
+      sample_values: [],
+    };
+
+    setColumns([...columns, newColumn]);
+    setRows(rows.map((row) => ({ ...row, [name]: "" })));
+  };
+
+  const deleteColumn = (columnName: string) => {
+    setColumns(columns.filter((col) => col.name !== columnName));
+
+    setRows(
+      rows.map((row) => {
+        const updated = { ...row };
+        delete updated[columnName];
+        return updated;
+      })
+    );
+  };
+
+  const sortByColumn = (columnName: string) => {
+    if (sortColumn === columnName) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortColumn(columnName);
+      setSortAsc(true);
+    }
   };
 
   const saveChanges = async () => {
@@ -60,18 +138,49 @@ export default function DatasetDetailScreen() {
         `/api/datasets/${id}`,
         {
           method: "PUT",
-          body: JSON.stringify({ data: rows }),
+          body: JSON.stringify({
+            data: rows,
+            columns,
+            row_count: rows.length,
+          }),
         },
         token
       );
 
       setDataset(updated);
       setRows(updated.data || []);
-      Alert.alert("Saved", "Dataset updated successfully");
+      setColumns(updated.columns || []);
+      Alert.alert("Saved", "Spreadsheet updated successfully");
     } catch (error: any) {
       Alert.alert("Save Failed", error.message || "Failed to save changes");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const exportCSV = () => {
+    const headers = columns.map((col) => col.name).join(",");
+    const csvRows = rows.map((row) =>
+      columns
+        .map((col) => {
+          const value = String(row[col.name] ?? "").replace(/"/g, '""');
+          return `"${value}"`;
+        })
+        .join(",")
+    );
+
+    const csv = [headers, ...csvRows].join("\n");
+
+    if (typeof window !== "undefined") {
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${dataset?.name || "dataset"}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } else {
+      Alert.alert("Export", "CSV export works on web.");
     }
   };
 
@@ -91,73 +200,184 @@ export default function DatasetDetailScreen() {
     );
   }
 
-  const columns = dataset.columns || [];
-
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>{dataset.name}</Text>
-      <Text style={styles.meta}>
-        {rows.length} rows • {columns.length} columns
-      </Text>
-
-      <TouchableOpacity
-        onPress={saveChanges}
-        style={styles.saveButton}
-        disabled={saving}
-      >
-        <Text style={styles.saveText}>
-          {saving ? "Saving..." : "Save Changes"}
-        </Text>
-      </TouchableOpacity>
-
-      <ScrollView horizontal>
+    <View style={styles.container}>
+      <View style={styles.topBar}>
         <View>
-          <View style={styles.row}>
-            {columns.map((col: any) => (
-              <Text key={col.name} style={[styles.cell, styles.headerCell]}>
-                {col.name}
-              </Text>
+          <Text style={styles.title}>{dataset.name}</Text>
+          <Text style={styles.meta}>
+            {rows.length} rows • {columns.length} columns
+          </Text>
+        </View>
+
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.button} onPress={addRow}>
+            <Text style={styles.buttonText}>+ Row</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={addColumn}>
+            <Text style={styles.buttonText}>+ Column</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.exportButton} onPress={exportCSV}>
+            <Text style={styles.buttonText}>Export CSV</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={saveChanges}
+            disabled={saving}
+          >
+            <Text style={styles.buttonText}>
+              {saving ? "Saving..." : "Save"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <TextInput
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search spreadsheet..."
+        placeholderTextColor="#777"
+        style={styles.search}
+      />
+
+      <ScrollView horizontal style={styles.sheetWrapper}>
+        <ScrollView>
+          <View>
+            <View style={styles.row}>
+              <Text style={[styles.headerCell, styles.rowNumber]}>#</Text>
+
+              {columns.map((col) => (
+                <View key={col.name} style={styles.headerCellWrapper}>
+                  <TouchableOpacity onPress={() => sortByColumn(col.name)}>
+                    <Text style={styles.headerText}>
+                      {col.name}
+                      {sortColumn === col.name ? (sortAsc ? " ↑" : " ↓") : ""}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={() => deleteColumn(col.name)}>
+                    <Text style={styles.deleteText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <Text style={[styles.headerCell, styles.actionCell]}>Action</Text>
+            </View>
+
+            {filteredRows.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.row}>
+                <Text style={[styles.cell, styles.rowNumber]}>
+                  {rowIndex + 1}
+                </Text>
+
+                {columns.map((col) => (
+                  <TextInput
+                    key={col.name}
+                    value={String(row[col.name] ?? "")}
+                    onChangeText={(value) =>
+                      updateCell(rowIndex, col.name, value)
+                    }
+                    style={styles.inputCell}
+                  />
+                ))}
+
+                <TouchableOpacity
+                  style={styles.deleteRowButton}
+                  onPress={() => deleteRow(rowIndex)}
+                >
+                  <Text style={styles.deleteRowText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
-
-          {rows.slice(0, 50).map((row: any, rowIndex: number) => (
-            <View key={rowIndex} style={styles.row}>
-              {columns.map((col: any) => (
-                <TextInput
-                  key={col.name}
-                  value={String(row[col.name] ?? "")}
-                  onChangeText={(value) =>
-                    updateCell(rowIndex, col.name, value)
-                  }
-                  style={styles.inputCell}
-                />
-              ))}
-            </View>
-          ))}
-        </View>
+        </ScrollView>
       </ScrollView>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0a0a0a", padding: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: "#0a0a0a",
+    padding: 16,
+  },
   center: {
     flex: 1,
     backgroundColor: "#0a0a0a",
     justifyContent: "center",
     alignItems: "center",
   },
-  title: { color: "#fff", fontSize: 26, fontWeight: "bold" },
-  meta: { color: "#999", marginTop: 8, marginBottom: 12 },
-  text: { color: "#fff" },
-  row: { flexDirection: "row" },
+  text: {
+    color: "#fff",
+  },
+  topBar: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  title: {
+    color: "#fff",
+    fontSize: 26,
+    fontWeight: "bold",
+  },
+  meta: {
+    color: "#999",
+    marginTop: 4,
+  },
+  actions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  button: {
+    backgroundColor: "#1f2937",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  saveButton: {
+    backgroundColor: "#3b82f6",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  exportButton: {
+    backgroundColor: "#047857",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  search: {
+    backgroundColor: "#111827",
+    borderWidth: 1,
+    borderColor: "#374151",
+    color: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  sheetWrapper: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  row: {
+    flexDirection: "row",
+  },
   cell: {
     color: "#fff",
     borderWidth: 1,
     borderColor: "#333",
     padding: 10,
     minWidth: 140,
+    minHeight: 44,
   },
   inputCell: {
     color: "#fff",
@@ -165,21 +385,57 @@ const styles = StyleSheet.create({
     borderColor: "#333",
     padding: 10,
     minWidth: 140,
+    minHeight: 44,
     backgroundColor: "#111",
   },
   headerCell: {
-    fontWeight: "bold",
-    backgroundColor: "#1f2937",
-  },
-  saveButton: {
-    backgroundColor: "#3b82f6",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    alignSelf: "flex-start",
-  },
-  saveText: {
     color: "#fff",
+    borderWidth: 1,
+    borderColor: "#333",
+    padding: 10,
+    minWidth: 140,
+    minHeight: 44,
+    backgroundColor: "#1f2937",
+    fontWeight: "bold",
+  },
+  headerCellWrapper: {
+    borderWidth: 1,
+    borderColor: "#333",
+    minWidth: 140,
+    minHeight: 44,
+    backgroundColor: "#1f2937",
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  deleteText: {
+    color: "#f87171",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  rowNumber: {
+    minWidth: 60,
+    textAlign: "center",
+  },
+  actionCell: {
+    minWidth: 100,
+  },
+  deleteRowButton: {
+    borderWidth: 1,
+    borderColor: "#333",
+    minWidth: 100,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#3f1d1d",
+  },
+  deleteRowText: {
+    color: "#f87171",
     fontWeight: "bold",
   },
 });
