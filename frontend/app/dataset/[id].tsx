@@ -58,6 +58,8 @@ export default function DatasetDetailScreen() {
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: string } | null>(null);
   const [formulaValue, setFormulaValue] = useState("");
   const [copiedCell, setCopiedCell] = useState<string>("");
+  const [selectionStart, setSelectionStart] = useState<{ row: number; col: string } | null>(null);
+  const [selectionEnd, setSelectionEnd] = useState<{ row: number; col: string } | null>(null);
 
   useEffect(() => {
     if (id && token) loadDataset();
@@ -257,6 +259,26 @@ const pasteToSelectedCell = async () => {
   setFormulaValue(value);
 };
 
+const isCellSelected = (rowIndex: number, colName: string) => {
+  if (!selectionStart || !selectionEnd) return false;
+
+  const startColIndex = columns.findIndex((c) => c.name === selectionStart.col);
+  const endColIndex = columns.findIndex((c) => c.name === selectionEnd.col);
+  const currentColIndex = columns.findIndex((c) => c.name === colName);
+
+  const minRow = Math.min(selectionStart.row, selectionEnd.row);
+  const maxRow = Math.max(selectionStart.row, selectionEnd.row);
+  const minCol = Math.min(startColIndex, endColIndex);
+  const maxCol = Math.max(startColIndex, endColIndex);
+
+  return (
+    rowIndex >= minRow &&
+    rowIndex <= maxRow &&
+    currentColIndex >= minCol &&
+    currentColIndex <= maxCol
+  );
+};
+
   const exportCSV = () => {
     const headers = columns.map((col) => col.name).join(",");
     const csvRows = rows.map((row) =>
@@ -377,6 +399,7 @@ const pasteToSelectedCell = async () => {
            : value;
 
          updateCell(selectedCell.row, selectedCell.col, finalValue);
+         
         }
       }}
        placeholder="fx"
@@ -424,6 +447,8 @@ const pasteToSelectedCell = async () => {
                             (c) => c.name === col.name
                           );
 
+                          
+
                         if (key === "ArrowRight") {
                            const next = columns[currentColIndex + 1];
                           if (next)
@@ -453,23 +478,30 @@ const pasteToSelectedCell = async () => {
                           if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === "v") {
                              await pasteToSelectedCell();
                           }
+                          
                       }}
 
                       onFocus={() => {
-                      setSelectedCell({ row: rowIndex, col: col.name });
+                      const cell = { row: rowIndex, col: col.name };
+                      setSelectedCell(cell);
+                      setSelectionStart(cell);
+                      setSelectionEnd(cell);
                       setFormulaValue(String(row[col.name] ?? ""));
-                      }}
+                    }}
+
+                    
                     onChangeText={(value) => {
                     updateCell(rowIndex, col.name, value);
                     setFormulaValue(value);
                       }}
+
                     style={[
                     styles.inputCell,
-                    selectedCell?.row === rowIndex &&
-                    selectedCell?.col === col.name
-                     ? styles.selectedCell
-                     : null,
-                     ]}
+                    isCellSelected(rowIndex, col.name) ? styles.selectedRangeCell : null,
+                    selectedCell?.row === rowIndex && selectedCell?.col === col.name
+                    ? styles.selectedCell
+                    : null,
+                   ]}
                   />
                 ))}
 
@@ -647,5 +679,9 @@ formulaBar: {
   deleteRowText: {
     color: "#f87171",
     fontWeight: "bold",
+  },
+
+  selectedRangeCell: {
+  backgroundColor: "#123524",
   },
 });
