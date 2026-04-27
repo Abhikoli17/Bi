@@ -13,6 +13,36 @@ import { useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "../../stores/authStore";
 import { apiCall } from "../../utils/api";
 
+const getColumnLetter = (index: number) => {
+  let letter = "";
+  let n = index + 1;
+
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    n = Math.floor((n - 1) / 26);
+  }
+
+  return letter;
+};
+
+const parseCellRef = (ref: string) => {
+  const match = ref.match(/^([A-Z]+)(\d+)$/i);
+  if (!match) return null;
+
+  let colIndex = 0;
+  const letters = match[1].toUpperCase();
+
+  for (let i = 0; i < letters.length; i++) {
+    colIndex = colIndex * 26 + (letters.charCodeAt(i) - 64);
+  }
+
+  return {
+    colIndex: colIndex - 1,
+    rowIndex: Number(match[2]) - 1,
+  };
+};
+
 export default function DatasetDetailScreen() {
   const { id } = useLocalSearchParams();
   const { token } = useAuthStore();
@@ -25,6 +55,8 @@ export default function DatasetDetailScreen() {
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState(true);
+  const [selectedCell, setSelectedCell] = useState<{ row: number; col: string } | null>(null);
+  const [formulaValue, setFormulaValue] = useState("");
 
   useEffect(() => {
     if (id && token) loadDataset();
@@ -158,6 +190,39 @@ export default function DatasetDetailScreen() {
     }
   };
 
+  const calculateFormula = (formula: string) => {
+  const clean = formula.trim().toUpperCase();
+
+  const match = clean.match(/^=(SUM|AVG|COUNT)\(([A-Z]+\d+):([A-Z]+\d+)\)$/);
+  if (!match) return formula;
+
+  const [, fn, startRef, endRef] = match;
+
+  const start = parseCellRef(startRef);
+  const end = parseCellRef(endRef);
+
+  if (!start || !end) return formula;
+
+  const values: number[] = [];
+
+  for (let r = start.rowIndex; r <= end.rowIndex; r++) {
+    for (let c = start.colIndex; c <= end.colIndex; c++) {
+      const colName = columns[c]?.name;
+      const value = Number(rows[r]?.[colName]);
+
+      if (!Number.isNaN(value)) values.push(value);
+    }
+  }
+
+  if (fn === "SUM") return String(values.reduce((a, b) => a + b, 0));
+  if (fn === "AVG") return values.length
+    ? String(values.reduce((a, b) => a + b, 0) / values.length)
+    : "0";
+  if (fn === "COUNT") return String(values.length);
+
+  return formula;
+};
+
   const exportCSV = () => {
     const headers = columns.map((col) => col.name).join(",");
     const csvRows = rows.map((row) =>
@@ -235,6 +300,22 @@ export default function DatasetDetailScreen() {
         </View>
       </View>
 
+      <View style={styles.toolbar}>
+  <Text style={{ color: "#fff", fontWeight: "bold" }}>Excel Mode</Text>
+
+  <TouchableOpacity style={styles.saveButton} onPress={saveChanges}>
+    <Text style={styles.buttonText}>Save</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity style={styles.button} onPress={addRow}>
+    <Text style={styles.buttonText}>+ Row</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity style={styles.button} onPress={addColumn}>
+    <Text style={styles.buttonText}>+ Col</Text>
+  </TouchableOpacity>
+     </View>
+
       <TextInput
         value={search}
         onChangeText={setSearch}
@@ -243,17 +324,35 @@ export default function DatasetDetailScreen() {
         style={styles.search}
       />
 
+      <TextInput
+          value={formulaValue}
+          onChangeText={(value) => {
+          setFormulaValue(value);
+
+         if (selectedCell) {
+           const finalValue = value.startsWith("=")
+           ? calculateFormula(value)
+           : value;
+
+         updateCell(selectedCell.row, selectedCell.col, finalValue);
+        }
+      }}
+       placeholder="fx"
+       placeholderTextColor="#999"
+       style={styles.formulaBar}
+     />
+
       <ScrollView horizontal style={styles.sheetWrapper}>
         <ScrollView>
           <View>
             <View style={styles.row}>
               <Text style={[styles.headerCell, styles.rowNumber]}>#</Text>
 
-              {columns.map((col) => (
+              {columns.map((col, index) => (
                 <View key={col.name} style={styles.headerCellWrapper}>
                   <TouchableOpacity onPress={() => sortByColumn(col.name)}>
                     <Text style={styles.headerText}>
-                      {col.name}
+                      {getColumnLetter(index)}  ({col.name})
                       {sortColumn === col.name ? (sortAsc ? " ↑" : " ↓") : ""}
                     </Text>
                   </TouchableOpacity>
@@ -275,12 +374,51 @@ export default function DatasetDetailScreen() {
 
                 {columns.map((col) => (
                   <TextInput
-                    key={col.name}
-                    value={String(row[col.name] ?? "")}
-                    onChangeText={(value) =>
-                      updateCell(rowIndex, col.name, value)
-                    }
-                    style={styles.inputCell}
+                      key={col.name}
+                      value={String(row[col.name] ?? "")}
+                       onKeyPress={(e: any) => {
+                          const key = e.nativeEvent.key;
+                          const currentColIndex = columns.findIndex(
+                            (c) => c.name === col.name
+                          );
+
+                        if (key === "ArrowRight") {
+                           const next = columns[currentColIndex + 1];
+                          if (next)
+                             setSelectedCell({ row: rowIndex, col: next.name });
+                        }
+
+                        if (key === "ArrowLeft") {
+                           const prev = columns[currentColIndex - 1];
+                         if (prev)
+                           setSelectedCell({ row: rowIndex, col: prev.name });
+                        }
+
+                        if (key === "ArrowDown") {
+                            if (filteredRows[rowIndex + 1])
+                               setSelectedCell({ row: rowIndex + 1, col: col.name });
+                        }
+
+                         if (key === "ArrowUp") {
+                            if (filteredRows[rowIndex - 1])
+                                 setSelectedCell({ row: rowIndex - 1, col: col.name });
+                             }
+                            }}
+                      onFocus={() => {
+                      setSelectedCell({ row: rowIndex, col: col.name });
+                      setFormulaValue(String(row[col.name] ?? ""));
+                      }}
+                    onChangeText={(value) => {
+                    updateCell(rowIndex, col.name, value);
+                    setFormulaValue(value);
+                      }}
+                    style={[
+                    styles.inputCell,
+                    selectedCell?.row === rowIndex &&
+                    selectedCell?.col === col.name
+                     ? styles.selectedCell
+                     : null,
+                     ]}
                   />
                 ))}
 
@@ -339,7 +477,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   saveButton: {
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#107c41",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -364,10 +502,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sheetWrapper: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#333",
+  flex: 1,
+  borderWidth: 1,
+  borderColor: "#333",
+  backgroundColor: "#0f172a",
   },
+ 
   row: {
     flexDirection: "row",
   },
@@ -413,6 +553,25 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
+  selectedCell: {
+  borderColor: "#22c55e",
+  borderWidth: 2,
+  backgroundColor: "#052e16",
+},
+toolbar: {
+  backgroundColor: "#107c41",
+  padding: 10,
+  flexDirection: "row",
+  gap: 8,
+},
+formulaBar: {
+  backgroundColor: "#111827",
+  borderColor: "#374151",
+  borderWidth: 1,
+  color: "#fff",
+  padding: 10,
+  marginVertical: 8,
+},
   deleteText: {
     color: "#f87171",
     fontSize: 20,
