@@ -404,21 +404,7 @@ const copySelectedRange = () => {
         </View>
       </View>
 
-      <View style={styles.toolbar}>
-  <Text style={{ color: "#fff", fontWeight: "bold" }}>Excel Mode</Text>
-
-  <TouchableOpacity style={styles.saveButton} onPress={saveChanges}>
-    <Text style={styles.buttonText}>Save</Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity style={styles.button} onPress={addRow}>
-    <Text style={styles.buttonText}>+ Row</Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity style={styles.button} onPress={addColumn}>
-    <Text style={styles.buttonText}>+ Col</Text>
-  </TouchableOpacity>
-     </View>
+    
 
       <TextInput
         value={search}
@@ -639,7 +625,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#333",
     padding: 10,
-    minWidth: 140,
+    minWidth: 180,
     minHeight: 44,
   },
   inputCell: {
@@ -647,7 +633,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#333",
     padding: 10,
-    minWidth: 140,
+    minWidth: 180,
     minHeight: 44,
     backgroundColor: "#111",
   },
@@ -664,7 +650,7 @@ const styles = StyleSheet.create({
   headerCellWrapper: {
     borderWidth: 1,
     borderColor: "#333",
-    minWidth: 140,
+    minWidth: 180,
     minHeight: 44,
     backgroundColor: "#1f2937",
     paddingHorizontal: 10,
@@ -675,6 +661,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: "#fff",
     fontWeight: "bold",
+    flex: 1,
   },
   selectedCell: {
   borderColor: "#22c55e",
