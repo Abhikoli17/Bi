@@ -57,6 +57,7 @@ export default function DatasetDetailScreen() {
   const [sortAsc, setSortAsc] = useState(true);
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: string } | null>(null);
   const [formulaValue, setFormulaValue] = useState("");
+  const [copiedCell, setCopiedCell] = useState<string>("");
 
   useEffect(() => {
     if (id && token) loadDataset();
@@ -223,6 +224,39 @@ export default function DatasetDetailScreen() {
   return formula;
 };
 
+const copySelectedCell = () => {
+  if (!selectedCell) {
+    Alert.alert("Select a cell first");
+    return;
+  }
+
+  const row = filteredRows[selectedCell.row];
+  const value = String(row?.[selectedCell.col] ?? "");
+  setCopiedCell(value);
+
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    navigator.clipboard.writeText(value);
+  }
+
+  Alert.alert("Copied", value);
+};
+
+const pasteToSelectedCell = async () => {
+  if (!selectedCell) {
+    Alert.alert("Select a cell first");
+    return;
+  }
+
+  let value = copiedCell;
+
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    value = await navigator.clipboard.readText();
+  }
+
+  updateCell(selectedCell.row, selectedCell.col, value);
+  setFormulaValue(value);
+};
+
   const exportCSV = () => {
     const headers = columns.map((col) => col.name).join(",");
     const csvRows = rows.map((row) =>
@@ -286,6 +320,14 @@ export default function DatasetDetailScreen() {
 
           <TouchableOpacity style={styles.exportButton} onPress={exportCSV}>
             <Text style={styles.buttonText}>Export CSV</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={copySelectedCell}>
+            <Text style={styles.buttonText}>Copy</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={pasteToSelectedCell}>
+            <Text style={styles.buttonText}>Paste</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -376,7 +418,7 @@ export default function DatasetDetailScreen() {
                   <TextInput
                       key={col.name}
                       value={String(row[col.name] ?? "")}
-                       onKeyPress={(e: any) => {
+                       onKeyPress={async (e: any) => {
                           const key = e.nativeEvent.key;
                           const currentColIndex = columns.findIndex(
                             (c) => c.name === col.name
@@ -403,7 +445,16 @@ export default function DatasetDetailScreen() {
                             if (filteredRows[rowIndex - 1])
                                  setSelectedCell({ row: rowIndex - 1, col: col.name });
                              }
-                            }}
+
+                          if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === "c") {
+                            copySelectedCell();
+                          }
+
+                          if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === "v") {
+                             await pasteToSelectedCell();
+                          }
+                      }}
+
                       onFocus={() => {
                       setSelectedCell({ row: rowIndex, col: col.name });
                       setFormulaValue(String(row[col.name] ?? ""));
