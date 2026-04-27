@@ -279,6 +279,42 @@ const isCellSelected = (rowIndex: number, colName: string) => {
   );
 };
 
+const copySelectedRange = () => {
+  if (!selectionStart || !selectionEnd) {
+    Alert.alert("Select a range first");
+    return;
+  }
+
+  const startColIndex = columns.findIndex((c) => c.name === selectionStart.col);
+  const endColIndex = columns.findIndex((c) => c.name === selectionEnd.col);
+
+  const minRow = Math.min(selectionStart.row, selectionEnd.row);
+  const maxRow = Math.max(selectionStart.row, selectionEnd.row);
+  const minCol = Math.min(startColIndex, endColIndex);
+  const maxCol = Math.max(startColIndex, endColIndex);
+
+  const selectedText = [];
+
+  for (let r = minRow; r <= maxRow; r++) {
+    const rowValues = [];
+
+    for (let c = minCol; c <= maxCol; c++) {
+      const colName = columns[c]?.name;
+      rowValues.push(String(filteredRows[r]?.[colName] ?? ""));
+    }
+
+    selectedText.push(rowValues.join("\t"));
+  }
+
+  const finalText = selectedText.join("\n");
+
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    navigator.clipboard.writeText(finalText);
+  }
+
+  Alert.alert("Copied", "Selected range copied");
+};
+
   const exportCSV = () => {
     const headers = columns.map((col) => col.name).join(",");
     const csvRows = rows.map((row) =>
@@ -350,6 +386,10 @@ const isCellSelected = (rowIndex: number, colName: string) => {
 
           <TouchableOpacity style={styles.button} onPress={pasteToSelectedCell}>
             <Text style={styles.buttonText}>Paste</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={copySelectedRange}>
+             <Text style={styles.buttonText}>Copy Range</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
