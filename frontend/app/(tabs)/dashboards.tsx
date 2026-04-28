@@ -26,11 +26,19 @@ export default function DashboardsScreen() {
   };
 
   const getNumericColumns = () => {
-    if (!selectedDataset?.columns) return [];
-    return selectedDataset.columns.filter((col: any) =>
-      selectedDataset.data?.some((row: any) => !isNaN(Number(row[col.name])))
+  if (!selectedDataset?.columns) return [];
+
+  return selectedDataset.columns.filter((col: any) => {
+    const values =
+      selectedDataset.data?.map((row: any) => row[col.name]) || [];
+
+    const numericValues = values.filter(
+      (v: any) => v !== "" && v !== null && !isNaN(Number(v))
     );
-  };
+
+    return numericValues.length > values.length * 0.6;
+  });
+};
 
   const getColumnTotal = (columnName: string) => {
     return selectedDataset.data
