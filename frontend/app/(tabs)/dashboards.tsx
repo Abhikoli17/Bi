@@ -73,7 +73,7 @@ const getFirstNumericColumn = () => {
   )?.name;
 };
 
-const getBarChartData = () => {
+/*const getBarChartData = () => {
   const categoryCol = getFirstTextColumn();
   const valueCol = getFirstNumericColumn();
 
@@ -90,6 +90,42 @@ const getBarChartData = () => {
     name: key,
     value: Number(grouped[key].toFixed(2)),
   }));
+};*/
+
+const getBarChartData = () => {
+  if (!selectedDataset?.columns || !selectedDataset?.data) return [];
+
+  const textColumn = selectedDataset.columns.find((col: any) =>
+    selectedDataset.data.some(
+      (row: any) =>
+        row[col.name] &&
+        isNaN(Number(row[col.name]))
+    )
+  )?.name;
+
+  const numericColumn = selectedDataset.columns.find((col: any) =>
+    selectedDataset.data.some(
+      (row: any) =>
+        row[col.name] !== "" &&
+        !isNaN(Number(row[col.name]))
+    )
+  )?.name;
+
+  if (!textColumn || !numericColumn) return [];
+
+  const grouped: any = {};
+
+  selectedDataset.data.forEach((row: any) => {
+    const key = row[textColumn] || "Unknown";
+    const value = Number(row[numericColumn]) || 0;
+
+    grouped[key] = (grouped[key] || 0) + value;
+  });
+
+  return Object.keys(grouped).slice(0, 8).map((key) => ({
+    name: key,
+    value: grouped[key],
+  }));
 };
 
   if (loading) {
@@ -105,11 +141,7 @@ const getBarChartData = () => {
       <Text style={styles.title}>Dashboards</Text>
       <Text style={styles.subtitle}>Interactive analytics from your uploaded datasets</Text>
 
-<Text style={styles.title}>Dashboards</Text>
 
-<Text style={styles.subtitle}>
-  Interactive analytics from your uploaded datasets
-</Text>
 
 <TouchableOpacity
   style={styles.builderButton}
@@ -283,6 +315,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
+
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -441,7 +474,7 @@ chartCard: {
   borderRadius: 12,
   padding: 16,
   width: "100%",
-  minHeight: 420,
+  minHeight: 340,
 },
 
 chartTitle: {
