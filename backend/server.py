@@ -432,6 +432,118 @@ async def delete_dashboard(dashboard_id: str, current_user: dict = Depends(get_c
     
     return {"message": "Dashboard deleted"}
 
+
+########
+
+@api_router.post("/dashboard-layouts")
+async def create_dashboard_layout(
+    layout_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    layout_doc = {
+        "name": layout_data.get("name", "Untitled Dashboard"),
+        "layout": layout_data.get("layout", []),
+        "widgets": layout_data.get("widgets", []),
+        "dataset_id": layout_data.get("dataset_id"),
+        "owner_id": current_user["_id"],
+        "team_id": current_user.get("team_id"),
+        "is_published": False,
+        "public_id": None,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+    result = await db.dashboard_layouts.insert_one(layout_doc)
+    layout_doc["_id"] = str(result.inserted_id)
+
+    return layout_doc
+
+
+@api_router.get("/dashboard-layouts")
+async def get_dashboard_layouts(current_user: dict = Depends(get_current_user)):
+    query = {
+        "$or": [
+            {"owner_id": current_user["_id"]},
+            {"team_id": current_user.get("team_id")},
+        ]
+    }
+
+    layouts = await db.dashboard_layouts.find(query).to_list(100)
+
+    for layout in layouts:
+        layout["_id"] = str(layout["_id"])
+
+    return layouts
+
+
+@api_router.get("/dashboard-layouts/{layout_id}")
+async def get_dashboard_layout(
+    layout_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    layout = await db.dashboard_layouts.find_one({"_id": ObjectId(layout_id)})
+
+    if not layout:
+        raise HTTPException(status_code=404, detail="Dashboard layout not found")
+
+    if layout["owner_id"] != current_user["_id"] and layout.get("team_id") != current_user.get("team_id"):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    layout["_id"] = str(layout["_id"])
+    return layout
+
+
+@api_router.put("/dashboard-layouts/{layout_id}")
+async def update_dashboard_layout(
+    layout_id: str,
+    layout_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    layout = await db.dashboard_layouts.find_one({"_id": ObjectId(layout_id)})
+
+    if not layout:
+        raise HTTPException(status_code=404, detail="Dashboard layout not found")
+
+    if layout["owner_id"] != current_user["_id"]:
+        raise HTTPException(status_code=403, detail="Only owner can update dashboard layout")
+
+    update_fields = {
+        "name": layout_data.get("name", layout.get("name")),
+        "layout": layout_data.get("layout", layout.get("layout", [])),
+        "widgets": layout_data.get("widgets", layout.get("widgets", [])),
+        "dataset_id": layout_data.get("dataset_id", layout.get("dataset_id")),
+        "updated_at": datetime.utcnow(),
+    }
+
+    await db.dashboard_layouts.update_one(
+        {"_id": ObjectId(layout_id)},
+        {"$set": update_fields}
+    )
+
+    updated = await db.dashboard_layouts.find_one({"_id": ObjectId(layout_id)})
+    updated["_id"] = str(updated["_id"])
+
+    return updated
+
+
+@api_router.delete("/dashboard-layouts/{layout_id}")
+async def delete_dashboard_layout(
+    layout_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    layout = await db.dashboard_layouts.find_one({"_id": ObjectId(layout_id)})
+
+    if not layout:
+        raise HTTPException(status_code=404, detail="Dashboard layout not found")
+
+    if layout["owner_id"] != current_user["_id"]:
+        raise HTTPException(status_code=403, detail="Only owner can delete dashboard layout")
+
+    await db.dashboard_layouts.delete_one({"_id": ObjectId(layout_id)})
+
+    return {"message": "Dashboard layout deleted"}
+
+
 # ===== AI ENDPOINTS =====
 @api_router.post("/ai/suggest-charts")
 async def ai_suggest_charts(request: ChartSuggestionRequest, current_user: dict = Depends(get_current_user)):
