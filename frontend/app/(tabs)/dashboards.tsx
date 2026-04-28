@@ -132,12 +132,24 @@ const getBarChartData = () => {
               <Text style={styles.cardValue}>{selectedDataset.row_count}</Text>
             </View>
 
-            <Text style={styles.sectionTitle}>Charts</Text>
+            
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Columns</Text>
+              <Text style={styles.cardValue}>{selectedDataset.columns?.length}</Text>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>File Type</Text>
+              <Text style={styles.cardValue}>{selectedDataset.file_type?.toUpperCase()}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.sectionTitle}>Charts</Text>
 
 <View style={styles.chartGrid}>
   <View style={styles.chartCard}>
     <Text style={styles.chartTitle}>Bar Chart</Text>
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={320}>
       <BarChart data={getBarChartData()}>
         <XAxis dataKey="name" />
         <YAxis />
@@ -149,7 +161,7 @@ const getBarChartData = () => {
 
   <View style={styles.chartCard}>
     <Text style={styles.chartTitle}>Line Chart</Text>
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={320}>
       <LineChart data={getBarChartData()}>
         <XAxis dataKey="name" />
         <YAxis />
@@ -160,16 +172,6 @@ const getBarChartData = () => {
   </View>
 </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardLabel}>Columns</Text>
-              <Text style={styles.cardValue}>{selectedDataset.columns?.length}</Text>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.cardLabel}>File Type</Text>
-              <Text style={styles.cardValue}>{selectedDataset.file_type?.toUpperCase()}</Text>
-            </View>
-          </View>
 
           <Text style={styles.sectionTitle}>Numeric Summary</Text>
 
@@ -372,8 +374,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   chartGrid: {
-  gap: 16,
-  marginBottom: 20,
+  gap: 20,
+  marginBottom: 24,
 },
 chartCard: {
   backgroundColor: "#111827",
@@ -381,12 +383,13 @@ chartCard: {
   borderWidth: 1,
   borderRadius: 12,
   padding: 16,
-  height: 360,
+  width: "100%",
+  minHeight: 420,
 },
 chartTitle: {
   color: "#fff",
-  fontSize: 18,
+  fontSize: 20,
   fontWeight: "bold",
-  marginBottom: 12,
+  marginBottom: 16,
 },
 });
