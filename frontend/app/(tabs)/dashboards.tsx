@@ -103,6 +103,12 @@ const getBarChartData = () => {
       <Text style={styles.title}>Dashboards</Text>
       <Text style={styles.subtitle}>Interactive analytics from your uploaded datasets</Text>
 
+    <View style={styles.filterPanel}>
+      <Text style={styles.filterTitle}>Filters</Text>
+
+      <Text style={styles.filterLabel}>Dataset Selector</Text>
+    </View>
+
       <View style={styles.datasetList}>
         {datasets.map((dataset) => (
           <TouchableOpacity
@@ -126,28 +132,56 @@ const getBarChartData = () => {
         </View>
       ) : (
         <>
-          <View style={styles.kpiGrid}>
-            <View style={styles.card}>
-              <Text style={styles.cardLabel}>Rows</Text>
-              <Text style={styles.cardValue}>{selectedDataset.row_count}</Text>
-            </View>
+         <View style={styles.kpiGrid}>
+  <View style={styles.card}>
+    <Text style={styles.cardLabel}>Rows</Text>
+    <Text style={styles.cardValue}>{selectedDataset.row_count}</Text>
+    <Text style={styles.growth}>↑ +12%</Text>
+  </View>
 
-            
-            <View style={styles.card}>
-              <Text style={styles.cardLabel}>Columns</Text>
-              <Text style={styles.cardValue}>{selectedDataset.columns?.length}</Text>
-            </View>
+  <View style={styles.card}>
+    <Text style={styles.cardLabel}>Columns</Text>
+    <Text style={styles.cardValue}>{selectedDataset.columns?.length}</Text>
+    <Text style={styles.growth}>↑ +4%</Text>
+  </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardLabel}>File Type</Text>
-              <Text style={styles.cardValue}>{selectedDataset.file_type?.toUpperCase()}</Text>
-            </View>
-          </View>
+  <View style={styles.card}>
+    <Text style={styles.cardLabel}>File Type</Text>
+    <Text style={styles.cardValue}>
+      {selectedDataset.file_type?.toUpperCase()}
+    </Text>
+    <Text style={styles.growth}>Live</Text>
+  </View>
+</View>
 
           <Text style={styles.sectionTitle}>Charts</Text>
 
 <View style={styles.chartGrid}>
   <View style={styles.chartCard}>
+
+    <Text style={styles.chartTitle}>Distribution</Text>
+
+  <ResponsiveContainer width="100%" height={320}>
+    <PieChart>
+      <Pie
+        data={getBarChartData()}
+        dataKey="value"
+        nameKey="name"
+        outerRadius={110}
+        innerRadius={60}
+        fill="#8884d8"
+        label
+      >
+        {getBarChartData().map((entry, index) => (
+          <Cell
+            key={index}
+            fill={["#3b82f6","#22c55e","#f59e0b","#ef4444","#8b5cf6"][index % 5]}
+          />
+        ))}
+      </Pie>
+      <Tooltip />
+    </PieChart>
+  </ResponsiveContainer>
     <Text style={styles.chartTitle}>Bar Chart</Text>
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={getBarChartData()}>
@@ -354,6 +388,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -361,22 +396,27 @@ const styles = StyleSheet.create({
     padding: 32,
     minHeight: 400,
   },
+
   emptyText: {
     fontSize: 20,
     fontWeight: '600',
     color: '#fff',
     marginTop: 16,
   },
+
   emptySubtext: {
     fontSize: 14,
     color: '#666',
     marginTop: 8,
     textAlign: 'center',
   },
+
   chartGrid: {
+  display: "flex",
   gap: 20,
   marginBottom: 24,
 },
+
 chartCard: {
   backgroundColor: "#111827",
   borderColor: "#333",
@@ -386,10 +426,38 @@ chartCard: {
   width: "100%",
   minHeight: 420,
 },
+
 chartTitle: {
   color: "#fff",
   fontSize: 20,
   fontWeight: "bold",
   marginBottom: 16,
 },
+
+filterPanel: {
+  backgroundColor: "#111827",
+  borderRadius: 12,
+  padding: 16,
+  marginBottom: 16,
+  borderWidth: 1,
+  borderColor: "#333",
+},
+
+filterTitle: {
+  color: "#fff",
+  fontSize: 18,
+  fontWeight: "bold",
+},
+
+filterLabel: {
+  color: "#999",
+  marginTop: 8,
+},
+
+growth: {
+  color: "#22c55e",
+  marginTop: 6,
+  fontWeight: "bold",
+},
+
 });
