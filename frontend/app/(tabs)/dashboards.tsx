@@ -1,4 +1,17 @@
 import React, { useEffect, useState }  from 'react';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { View, Text, StyleSheet, ScrollView,  TouchableOpacity, ActivityIndicator, } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from "../../stores/authStore";
@@ -46,6 +59,37 @@ export default function DashboardsScreen() {
       .toFixed(2);
   };
 
+  const getFirstTextColumn = () => {
+  return selectedDataset?.columns?.find((col: any) =>
+    selectedDataset.data?.some((row: any) => isNaN(Number(row[col.name])))
+  )?.name;
+};
+
+const getFirstNumericColumn = () => {
+  return selectedDataset?.columns?.find((col: any) =>
+    selectedDataset.data?.some((row: any) => !isNaN(Number(row[col.name])))
+  )?.name;
+};
+
+const getBarChartData = () => {
+  const categoryCol = getFirstTextColumn();
+  const valueCol = getFirstNumericColumn();
+
+  if (!categoryCol || !valueCol) return [];
+
+  const grouped: any = {};
+
+  selectedDataset.data?.forEach((row: any) => {
+    const key = row[categoryCol] || "Unknown";
+    grouped[key] = (grouped[key] || 0) + Number(row[valueCol] || 0);
+  });
+
+  return Object.keys(grouped).slice(0, 10).map((key) => ({
+    name: key,
+    value: Number(grouped[key].toFixed(2)),
+  }));
+};
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -87,6 +131,34 @@ export default function DashboardsScreen() {
               <Text style={styles.cardLabel}>Rows</Text>
               <Text style={styles.cardValue}>{selectedDataset.row_count}</Text>
             </View>
+
+            <Text style={styles.sectionTitle}>Charts</Text>
+
+<View style={styles.chartGrid}>
+  <View style={styles.chartCard}>
+    <Text style={styles.chartTitle}>Bar Chart</Text>
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={getBarChartData()}>
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="value" fill="#3b82f6" />
+      </BarChart>
+    </ResponsiveContainer>
+  </View>
+
+  <View style={styles.chartCard}>
+    <Text style={styles.chartTitle}>Line Chart</Text>
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={getBarChartData()}>
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="value" stroke="#22c55e" />
+      </LineChart>
+    </ResponsiveContainer>
+  </View>
+</View>
 
             <View style={styles.card}>
               <Text style={styles.cardLabel}>Columns</Text>
@@ -299,4 +371,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  chartGrid: {
+  gap: 16,
+  marginBottom: 20,
+},
+chartCard: {
+  backgroundColor: "#111827",
+  borderColor: "#333",
+  borderWidth: 1,
+  borderRadius: 12,
+  padding: 16,
+  height: 360,
+},
+chartTitle: {
+  color: "#fff",
+  fontSize: 18,
+  fontWeight: "bold",
+  marginBottom: 12,
+},
 });
