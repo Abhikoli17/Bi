@@ -16,8 +16,10 @@ import { View, Text, StyleSheet, ScrollView,  TouchableOpacity, ActivityIndicato
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from "../../stores/authStore";
 import { apiCall } from "../../utils/api";
+import { useRouter } from "expo-router";
 
 export default function DashboardsScreen() {
+  const router = useRouter();
   const { token } = useAuthStore();
   const [datasets, setDatasets] = useState<any[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<any>(null);
@@ -102,6 +104,21 @@ const getBarChartData = () => {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Dashboards</Text>
       <Text style={styles.subtitle}>Interactive analytics from your uploaded datasets</Text>
+
+<Text style={styles.title}>Dashboards</Text>
+
+<Text style={styles.subtitle}>
+  Interactive analytics from your uploaded datasets
+</Text>
+
+<TouchableOpacity
+  style={styles.builderButton}
+  onPress={() => router.push("/dashboard-builder")}
+>
+  <Text style={styles.builderButtonText}>
+    Open Dashboard Builder
+  </Text>
+</TouchableOpacity>
 
     <View style={styles.filterPanel}>
       <Text style={styles.filterTitle}>Filters</Text>
@@ -457,6 +474,20 @@ filterLabel: {
 growth: {
   color: "#22c55e",
   marginTop: 6,
+  fontWeight: "bold",
+},
+
+builderButton: {
+  backgroundColor: "#2563eb",
+  padding: 12,
+  borderRadius: 10,
+  marginTop: 12,
+  marginBottom: 16,
+  alignSelf: "flex-start",
+},
+
+builderButtonText: {
+  color: "#fff",
   fontWeight: "bold",
 },
 
