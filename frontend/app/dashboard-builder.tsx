@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView,
+  TextInput,
+  Alert, 
+} from "react-native";
+
+declare const require: any;
+
 const ReactGridLayout = require("react-grid-layout");
-const Responsive = ReactGridLayout.Responsive;
-const WidthProvider = ReactGridLayout.WidthProvider;
+const Responsive = ReactGridLayout.Responsive || ReactGridLayout.default?.Responsive;
+const WidthProvider = ReactGridLayout.WidthProvider || ReactGridLayout.default?.WidthProvider;
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import {
@@ -16,7 +27,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { TextInput, Alert } from "react-native";
 import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
 
