@@ -11,9 +11,12 @@ import {
 
 declare const require: any;
 
-const ReactGridLayout = require("react-grid-layout");
-const Responsive = ReactGridLayout.Responsive || ReactGridLayout.default?.Responsive;
-const WidthProvider = ReactGridLayout.WidthProvider || ReactGridLayout.default?.WidthProvider;
+//const ReactGridLayout = require("react-grid-layout");
+//const Responsive = ReactGridLayout.Responsive || ReactGridLayout.default?.Responsive;
+//const WidthProvider = ReactGridLayout.WidthProvider || ReactGridLayout.default?.WidthProvider;
+const RGL = require("react-grid-layout");
+const ReactGridLayout = RGL.default || RGL;
+
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import {
@@ -30,7 +33,7 @@ import {
 import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+//const ResponsiveGridLayout = WidthProvider(Responsive);
 const { token } = useAuthStore();
 const [savedDashboards, setSavedDashboards] = useState<any[]>([]);
 const [dashboardName, setDashboardName] = useState("My Dashboard");
@@ -177,14 +180,22 @@ const deleteDashboard = async (dashboardId: string) => {
 
       <View style={styles.canvas}>
 
-        <ResponsiveGridLayout
+        <ReactGridLayout
            className="layout"
-           layouts={{ lg: layout }}
-           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-           cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+           layout={layout}
+           cols={12}
            rowHeight={60}
+           width={1100}
            onLayoutChange={(newLayout: any) => setLayout(newLayout)}
            draggableHandle=".drag-handle"
+
+
+           //layouts={{ lg: layout }}
+           //breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
+           //cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+           //rowHeight={60}
+           //onLayoutChange={(newLayout: any) => setLayout(newLayout)}
+           //draggableHandle=".drag-handle"
         >
 
           <View key="kpi1" style={styles.visualCard}>
@@ -226,7 +237,7 @@ const deleteDashboard = async (dashboardId: string) => {
               </LineChart>
             </ResponsiveContainer>
           </View>
-        </ResponsiveGridLayout>
+        </ReactGridLayout>
       </View>
     </ScrollView>
   );
