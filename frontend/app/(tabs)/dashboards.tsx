@@ -1,4 +1,508 @@
-import React, { useEffect, useState }  from 'react';
+import React, { useEffect, useState } from "react";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "../../stores/authStore";
+import { apiCall } from "../../utils/api";
+import { useRouter } from "expo-router";
+
+const CHART_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+
+export default function DashboardsScreen() {
+  const router = useRouter();
+  const { token } = useAuthStore();
+
+  const [datasets, setDatasets] = useState<any[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (token) loadDatasets();
+  }, [token]);
+
+  const loadDatasets = async () => {
+    try {
+      const data = await apiCall("/api/datasets", {}, token);
+      setDatasets(data);
+      if (data.length > 0) setSelectedDataset(data[0]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getNumericColumns = () => {
+    if (!selectedDataset?.columns) return [];
+
+    return selectedDataset.columns.filter((col: any) => {
+      const values = selectedDataset.data?.map((row: any) => row[col.name]) || [];
+      const numericValues = values.filter(
+        (v: any) => v !== "" && v !== null && !isNaN(Number(v))
+      );
+
+      return numericValues.length > values.length * 0.6;
+    });
+  };
+
+  const getColumnTotal = (columnName: string) => {
+    return selectedDataset.data
+      ?.reduce((sum: number, row: any) => sum + Number(row[columnName] || 0), 0)
+      .toFixed(2);
+  };
+
+  const getBarChartData = () => {
+    if (!selectedDataset?.columns || !selectedDataset?.data) return [];
+
+    const textColumn = selectedDataset.columns.find((col: any) =>
+      selectedDataset.data.some(
+        (row: any) => row[col.name] && isNaN(Number(row[col.name]))
+      )
+    )?.name;
+
+    const numericColumn = selectedDataset.columns.find((col: any) =>
+      selectedDataset.data.some(
+        (row: any) => row[col.name] !== "" && !isNaN(Number(row[col.name]))
+      )
+    )?.name;
+
+    if (!textColumn || !numericColumn) return [];
+
+    const grouped: any = {};
+
+    selectedDataset.data.forEach((row: any) => {
+      const key = row[textColumn] || "Unknown";
+      const value = Number(row[numericColumn]) || 0;
+      grouped[key] = (grouped[key] || 0) + value;
+    });
+
+    return Object.keys(grouped)
+      .slice(0, 8)
+      .map((key) => ({
+        name: key,
+        value: Number(grouped[key].toFixed(2)),
+      }));
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color="#3b82f6" size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.page}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>Dashboards</Text>
+          <Text style={styles.subtitle}>Executive analytics workspace</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.builderButton}
+          onPress={() => router.push("/dashboard-builder")}
+        >
+          <Text style={styles.builderButtonText}>Open Dashboard Builder</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.mainLayout}>
+        <View style={styles.sidebar}>
+          <Text style={styles.panelTitle}>Filters</Text>
+          <Text style={styles.filterLabel}>Dataset Selector</Text>
+
+          <ScrollView>
+            {datasets.map((dataset) => (
+              <TouchableOpacity
+                key={dataset._id}
+                style={[
+                  styles.datasetButton,
+                  selectedDataset?._id === dataset._id && styles.activeDataset,
+                ]}
+                onPress={() => setSelectedDataset(dataset)}
+              >
+                <Text style={styles.datasetButtonText}>{dataset.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <ScrollView style={styles.content}>
+          {!selectedDataset ? (
+            <View style={styles.emptyBox}>
+              <Ionicons name="grid-outline" size={64} color="#444" />
+              <Text style={styles.emptyTitle}>No dataset selected</Text>
+              <Text style={styles.emptyText}>Upload a dataset first.</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.kpiStrip}>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.cardLabel}>Rows</Text>
+                  <Text style={styles.cardValue}>{selectedDataset.row_count}</Text>
+                  <Text style={styles.growth}>↑ +12%</Text>
+                </View>
+
+                <View style={styles.kpiCard}>
+                  <Text style={styles.cardLabel}>Columns</Text>
+                  <Text style={styles.cardValue}>{selectedDataset.columns?.length}</Text>
+                  <Text style={styles.growth}>↑ +4%</Text>
+                </View>
+
+                <View style={styles.kpiCard}>
+                  <Text style={styles.cardLabel}>File Type</Text>
+                  <Text style={styles.cardValue}>
+                    {selectedDataset.file_type?.toUpperCase()}
+                  </Text>
+                  <Text style={styles.growth}>Live</Text>
+                </View>
+              </View>
+
+              <View style={styles.chartGridExecutive}>
+                <View style={styles.chartCardHalf}>
+                  <Text style={styles.chartTitle}>Distribution</Text>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie
+                        data={getBarChartData()}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={95}
+                        innerRadius={55}
+                        label
+                      >
+                        {getBarChartData().map((entry, index) => (
+                          <Cell
+                            key={index}
+                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </View>
+
+                <View style={styles.chartCardHalf}>
+                  <Text style={styles.chartTitle}>Bar Chart</Text>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={getBarChartData()}>
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#3b82f6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </View>
+
+                <View style={styles.chartCardFull}>
+                  <Text style={styles.chartTitle}>Trend</Text>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <LineChart data={getBarChartData()}>
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="value" stroke="#22c55e" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </View>
+              </View>
+
+              <Text style={styles.sectionTitle}>Numeric Summary</Text>
+
+              <View style={styles.summaryGrid}>
+                {getNumericColumns().slice(0, 6).map((col: any) => (
+                  <View key={col.name} style={styles.summaryCard}>
+                    <Text style={styles.cardLabel}>{col.name}</Text>
+                    <Text style={styles.cardValue}>{getColumnTotal(col.name)}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={styles.sectionTitle}>Preview</Text>
+
+              <ScrollView horizontal style={styles.previewBox}>
+                <View>
+                  <View style={styles.row}>
+                    {selectedDataset.columns?.slice(0, 8).map((col: any) => (
+                      <Text key={col.name} style={styles.headerCell}>
+                        {col.name}
+                      </Text>
+                    ))}
+                  </View>
+
+                  {selectedDataset.data?.slice(0, 10).map((row: any, index: number) => (
+                    <View key={index} style={styles.row}>
+                      {selectedDataset.columns?.slice(0, 8).map((col: any) => (
+                        <Text key={col.name} style={styles.cell}>
+                          {String(row[col.name] ?? "")}
+                        </Text>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </>
+          )}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  page: {
+    flex: 1,
+    backgroundColor: "#0a0a0a",
+    padding: 16,
+  },
+  center: {
+    flex: 1,
+    backgroundColor: "#0a0a0a",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 12,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  subtitle: {
+    color: "#999",
+    marginTop: 4,
+  },
+  builderButton: {
+    backgroundColor: "#2563eb",
+    padding: 12,
+    borderRadius: 10,
+  },
+  builderButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  mainLayout: {
+    flexDirection: "row",
+    gap: 16,
+    flex: 1,
+  },
+  sidebar: {
+    width: 260,
+    backgroundColor: "#111827",
+    borderWidth: 1,
+    borderColor: "#333",
+    borderRadius: 14,
+    padding: 16,
+  },
+  content: {
+    flex: 1,
+  },
+  panelTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+  },
+  filterLabel: {
+    color: "#999",
+    marginBottom: 8,
+  },
+  datasetButton: {
+    backgroundColor: "#1f2937",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  activeDataset: {
+    backgroundColor: "#2563eb",
+  },
+  datasetButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  kpiStrip: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  kpiCard: {
+    flex: 1,
+    backgroundColor: "#111827",
+    borderColor: "#333",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 18,
+  },
+  cardLabel: {
+    color: "#999",
+    fontSize: 13,
+  },
+  cardValue: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: 6,
+  },
+  growth: {
+    color: "#22c55e",
+    marginTop: 6,
+    fontWeight: "bold",
+  },
+  chartGridExecutive: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 16,
+  },
+  chartCardHalf: {
+    backgroundColor: "#111827",
+    borderColor: "#333",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    width: "49%",
+    minHeight: 350,
+  },
+  chartCardFull: {
+    backgroundColor: "#111827",
+    borderColor: "#333",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    width: "100%",
+    minHeight: 390,
+  },
+  chartTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginVertical: 14,
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  summaryCard: {
+    backgroundColor: "#052e16",
+    borderColor: "#166534",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    minWidth: 180,
+  },
+  previewBox: {
+    backgroundColor: "#111827",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#333",
+    marginBottom: 32,
+  },
+  row: {
+    flexDirection: "row",
+  },
+  headerCell: {
+    color: "#fff",
+    backgroundColor: "#1f2937",
+    borderWidth: 1,
+    borderColor: "#333",
+    padding: 10,
+    minWidth: 150,
+    fontWeight: "bold",
+  },
+  cell: {
+    color: "#fff",
+    borderWidth: 1,
+    borderColor: "#333",
+    padding: 10,
+    minWidth: 150,
+  },
+  emptyBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 80,
+  },
+  emptyTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 16,
+  },
+  emptyText: {
+    color: "#666",
+    marginTop: 8,
+  },
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*import React, { useEffect, useState }  from 'react';
 import {
   BarChart,
   Bar,
@@ -92,7 +596,7 @@ const getFirstNumericColumn = () => {
   }));
 };*/
 
-const getBarChartData = () => {
+/*const getBarChartData = () => {
   if (!selectedDataset?.columns || !selectedDataset?.data) return [];
 
   const textColumn = selectedDataset.columns.find((col: any) =>
@@ -524,4 +1028,4 @@ builderButtonText: {
   fontWeight: "bold",
 },
 
-});
+});*/
