@@ -215,6 +215,7 @@ const deleteDashboard = async (dashboardId: string) => {
       }}
       onResponderMove={(e: any) => {
         if (resizingId === widget.id) {
+
           const dx = e.nativeEvent.pageX - startPos.x;
           const dy = e.nativeEvent.pageY - startPos.y;
 
@@ -223,8 +224,8 @@ const deleteDashboard = async (dashboardId: string) => {
               w.id === widget.id
                 ? {
                     ...w,
-                    w: Math.max(180, w.w + dx),
-                    h: Math.max(120, w.h + dy),
+                   w: Math.max(180, Math.round((w.w + dx) / GRID_SIZE) * GRID_SIZE),
+                   h: Math.max(120, Math.round((w.h + dy) / GRID_SIZE) * GRID_SIZE),
                   }
                 : w
             )
@@ -239,13 +240,23 @@ const deleteDashboard = async (dashboardId: string) => {
 
         if (draggingId !== widget.id) return;
 
+        
+        //const dx = e.nativeEvent.pageX - startPos.x;
+        //const dy = e.nativeEvent.pageY - startPos.y;
+
+
+        const GRID_SIZE = 20;
+
         const dx = e.nativeEvent.pageX - startPos.x;
         const dy = e.nativeEvent.pageY - startPos.y;
+
+        const snappedX = Math.round((widget.x + dx) / GRID_SIZE) * GRID_SIZE;
+        const snappedY = Math.round((widget.y + dy) / GRID_SIZE) * GRID_SIZE;
 
         setWidgets((prev) =>
           prev.map((w) =>
             w.id === widget.id
-              ? { ...w, x: w.x + dx, y: w.y + dy }
+              ? { ...w, x: snappedX, y: snappedY }
               : w
           )
         );
@@ -338,15 +349,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  canvas: {
-    backgroundColor: "#111827",
-    borderWidth: 1,
-    borderColor: "#333",
-    borderRadius: 12,
-    padding: 12,
-    minHeight: 700,
-    overflow: "hidden",
-  },
+ 
   visualCard: {
     backgroundColor: "#0f172a",
     borderWidth: 1,
@@ -446,6 +449,16 @@ resizeHandle: {
   height: 18,
   backgroundColor: "#3b82f6",
   borderTopLeftRadius: 8,
+},
+
+canvas: {
+  position: "relative",
+  minHeight: 800,
+  backgroundColor: "#111827",
+  borderWidth: 1,
+  borderColor: "#333",
+  borderRadius: 12,
+  overflow: "hidden",
 },
 
 });
