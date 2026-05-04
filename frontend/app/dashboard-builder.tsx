@@ -17,8 +17,8 @@ declare const require: any;
 const RGL = require("react-grid-layout");
 const ReactGridLayout = RGL.default || RGL;
 
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
+//import "react-grid-layout/css/styles.css";
+//import "react-resizable/css/styles.css";
 import {
   BarChart,
   Bar,
@@ -32,6 +32,14 @@ import {
 
 import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
+
+export default function DashboardBuilder() {
+  const [layout, setLayout] = useState([
+    { i: "kpi1", x: 0, y: 0, w: 3, h: 2 },
+    { i: "kpi2", x: 3, y: 0, w: 3, h: 2 },
+    { i: "bar", x: 0, y: 2, w: 6, h: 5 },
+    { i: "line", x: 6, y: 2, w: 6, h: 5 },
+  ]);
 
 //const ResponsiveGridLayout = WidthProvider(Responsive);
 const { token } = useAuthStore();
@@ -47,13 +55,8 @@ const sampleData = [
   { name: "May", value: 900 },
 ];
 
-export default function DashboardBuilder() {
-  const [layout, setLayout] = useState([
-    { i: "kpi1", x: 0, y: 0, w: 3, h: 2 },
-    { i: "kpi2", x: 3, y: 0, w: 3, h: 2 },
-    { i: "bar", x: 0, y: 2, w: 6, h: 5 },
-    { i: "line", x: 6, y: 2, w: 6, h: 5 },
-  ]);
+
+
 
   const loadSavedDashboards = async () => {
   if (!token) return;
@@ -180,64 +183,29 @@ const deleteDashboard = async (dashboardId: string) => {
 
       <View style={styles.canvas}>
 
-        <ReactGridLayout
-           className="layout"
-           layout={layout}
-           cols={12}
-           rowHeight={60}
-           width={1100}
-           onLayoutChange={(newLayout: any) => setLayout(newLayout)}
-           draggableHandle=".drag-handle"
+        
 
+  <View style={styles.visualCard}>
+    <Text style={styles.cardLabel}>Total Sales</Text>
+    <Text style={styles.kpiValue}>₹12.4L</Text>
+  </View>
 
-           //layouts={{ lg: layout }}
-           //breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-           //cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
-           //rowHeight={60}
-           //onLayoutChange={(newLayout: any) => setLayout(newLayout)}
-           //draggableHandle=".drag-handle"
-        >
+  <View style={styles.visualCard}>
+    <Text style={styles.cardLabel}>Customers</Text>
+    <Text style={styles.kpiValue}>2,430</Text>
+  </View>
 
-          <View key="kpi1" style={styles.visualCard}>
-            <Text style={styles.dragHandle}>⋮⋮</Text>
-            <Text style={styles.cardLabel}>Total Sales</Text>
-            <Text style={styles.kpiValue}>₹12.4L</Text>
-            <Text style={styles.growth}>↑ 18%</Text>
-          </View>
-
-          <View key="kpi2" style={styles.visualCard}>
-            <Text style={styles.dragHandle}>⋮⋮</Text>
-            <Text style={styles.cardLabel}>Customers</Text>
-            <Text style={styles.kpiValue}>2,430</Text>
-            <Text style={styles.growth}>↑ 9%</Text>
-          </View>
-
-          <View key="bar" style={styles.visualCard}>
-            <Text style={styles.dragHandle}>⋮⋮</Text>
-            <Text style={styles.chartTitle}>Bar Chart</Text>
-            <ResponsiveContainer width="100%" height="80%">
-              <BarChart data={sampleData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </View>
-
-          <View key="line" style={styles.visualCard}>
-            <Text style={styles.dragHandle}>⋮⋮</Text>
-            <Text style={styles.chartTitle}>Line Chart</Text>
-            <ResponsiveContainer width="100%" height="80%">
-              <LineChart data={sampleData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#22c55e" />
-              </LineChart>
-            </ResponsiveContainer>
-          </View>
-        </ReactGridLayout>
+  <View style={styles.visualCard}>
+    <Text style={styles.chartTitle}>Bar Chart</Text>
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={sampleData}>
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="value" fill="#3b82f6" />
+      </BarChart>
+    </ResponsiveContainer>
+  </View>
       </View>
     </ScrollView>
   );
