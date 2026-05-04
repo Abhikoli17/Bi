@@ -41,6 +41,16 @@ export default function DashboardBuilder() {
     { i: "line", x: 6, y: 2, w: 6, h: 5 },
   ]);
 
+  const [widgets, setWidgets] = useState([
+  { id: "kpi1", x: 20, y: 20, w: 220, h: 130, type: "kpi" },
+  { id: "kpi2", x: 260, y: 20, w: 220, h: 130, type: "kpi" },
+  { id: "chart1", x: 20, y: 180, w: 460, h: 260, type: "chart" },
+]);
+
+const [draggingId, setDraggingId] = useState<string | null>(null);
+const [resizingId, setResizingId] = useState<string | null>(null);
+const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+
 //const ResponsiveGridLayout = WidthProvider(Responsive);
 const { token } = useAuthStore();
 const [savedDashboards, setSavedDashboards] = useState<any[]>([]);
@@ -182,30 +192,107 @@ const deleteDashboard = async (dashboardId: string) => {
       </View>
 
       <View style={styles.canvas}>
+        
+  {widgets.map((widget) => (
+    <View
+      key={widget.id}
+      style={[
+        styles.widget,
+        {
+          left: widget.x,
+          top: widget.y,
+          width: widget.w,
+          height: widget.h,
+        },
+      ]}
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={(e: any) => {
+        setDraggingId(widget.id);
+        setStartPos({
+          x: e.nativeEvent.pageX,
+          y: e.nativeEvent.pageY,
+        });
+      }}
+      onResponderMove={(e: any) => {
+        if (resizingId === widget.id) {
+          const dx = e.nativeEvent.pageX - startPos.x;
+          const dy = e.nativeEvent.pageY - startPos.y;
+
+          setWidgets((prev) =>
+            prev.map((w) =>
+              w.id === widget.id
+                ? {
+                    ...w,
+                    w: Math.max(180, w.w + dx),
+                    h: Math.max(120, w.h + dy),
+                  }
+                : w
+            )
+          );
+
+          setStartPos({
+            x: e.nativeEvent.pageX,
+            y: e.nativeEvent.pageY,
+          });
+          return;
+        }
+
+        if (draggingId !== widget.id) return;
+
+        const dx = e.nativeEvent.pageX - startPos.x;
+        const dy = e.nativeEvent.pageY - startPos.y;
+
+        setWidgets((prev) =>
+          prev.map((w) =>
+            w.id === widget.id
+              ? { ...w, x: w.x + dx, y: w.y + dy }
+              : w
+          )
+        );
+
+        setStartPos({
+          x: e.nativeEvent.pageX,
+          y: e.nativeEvent.pageY,
+        });
+      }}
+      onResponderRelease={() => {
+        setDraggingId(null);
+        setResizingId(null);
+      }}
+    >
+      <Text style={styles.widgetTitle}>
+        {widget.type === "kpi" ? "KPI" : "Chart"}
+      </Text>
+
+      {widget.type === "kpi" ? (
+        <Text style={styles.kpiValue}>₹12.4L</Text>
+      ) : (
+        <ResponsiveContainer width="100%" height={120}>
+          <BarChart data={sampleData}>
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="value" fill="#3b82f6" />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+
+      {/* Resize Handle */}
+      <TouchableOpacity
+        style={styles.resizeHandle}
+        onPressIn={(e: any) => {
+          setResizingId(widget.id);
+          setStartPos({
+            x: e.nativeEvent.pageX,
+            y: e.nativeEvent.pageY,
+          });
+        }}
+      />
+    </View>
+  ))}
+
 
         
-
-  <View style={styles.visualCard}>
-    <Text style={styles.cardLabel}>Total Sales</Text>
-    <Text style={styles.kpiValue}>₹12.4L</Text>
-  </View>
-
-  <View style={styles.visualCard}>
-    <Text style={styles.cardLabel}>Customers</Text>
-    <Text style={styles.kpiValue}>2,430</Text>
-  </View>
-
-  <View style={styles.visualCard}>
-    <Text style={styles.chartTitle}>Bar Chart</Text>
-    <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={sampleData}>
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Bar dataKey="value" fill="#3b82f6" />
-      </BarChart>
-    </ResponsiveContainer>
-  </View>
       </View>
     </ScrollView>
   );
@@ -336,4 +423,29 @@ deleteText: {
   color: "#f87171",
   fontWeight: "bold",
 },
+
+widget: {
+  position: "absolute",
+  backgroundColor: "#0f172a",
+  borderWidth: 1,
+  borderColor: "#334155",
+  borderRadius: 12,
+  padding: 12,
+},
+
+widgetTitle: {
+  color: "#fff",
+  fontWeight: "bold",
+},
+
+resizeHandle: {
+  position: "absolute",
+  right: 0,
+  bottom: 0,
+  width: 18,
+  height: 18,
+  backgroundColor: "#3b82f6",
+  borderTopLeftRadius: 8,
+},
+
 });
