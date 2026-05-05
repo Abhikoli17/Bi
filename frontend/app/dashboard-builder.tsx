@@ -24,6 +24,9 @@ import {
   Bar,
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -44,7 +47,7 @@ export default function DashboardBuilder() {
   const [widgets, setWidgets] = useState([
   { id: "kpi1", x: 20, y: 20, w: 220, h: 130, type: "kpi" },
   { id: "kpi2", x: 260, y: 20, w: 220, h: 130, type: "kpi" },
-  { id: "chart1", x: 20, y: 180, w: 460, h: 260, type: "chart" },
+  { id: "bar1", x: 20, y: 180, w: 460, h: 260, type: "bar" },
 ]);
 
 const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -68,7 +71,7 @@ const sampleData = [
 const GRID_SIZE = 20;
 
         const getNextPosition = () => {
-  const padding = 20;
+        const padding = 20;
 
   if (widgets.length === 0) {
     return { x: padding, y: padding };
@@ -109,19 +112,33 @@ const GRID_SIZE = 20;
       const addChart = () => {
       const pos = getNextPosition();
 
-         setWidgets((prev) => [
-         ...prev,
-        {
-           id: `chart-${Date.now()}`,
-           x: pos.x,
-           y: pos.y,
-           w: 460,
-           h: 260,
-           type: "chart",
-        },
-      ]);
-    };
+      const chartTypes = ["bar", "line", "pie", "map"];
+      const chartCount = widgets.filter((w) => w.type !== "kpi").length;
+      const nextType = chartTypes[chartCount % chartTypes.length];
 
+     setWidgets((prev) => [
+       ...prev,
+    {
+      id: `${nextType}-${Date.now()}`,
+      x: pos.x,
+      y: pos.y,
+      w: 460,
+      h: 260,
+      type: nextType,
+    },
+  ]);
+};
+
+const getKpiData = (index: number) => {
+  const kpis = [
+    { title: "Total Sales", value: "₹12.4L", growth: "↑ 18%" },
+    { title: "Customers", value: "2,430", growth: "↑ 9%" },
+    { title: "Revenue", value: "₹8.7L", growth: "↑ 14%" },
+    { title: "Orders", value: "1,280", growth: "↑ 6%" },
+  ];
+
+  return kpis[index % kpis.length];
+};
 
   const loadSavedDashboards = async () => {
   if (!token) return;
@@ -327,22 +344,66 @@ const deleteDashboard = async (dashboardId: string) => {
         setResizingId(null);
       }}
     >
-      <Text style={styles.widgetTitle}>
-        {widget.type === "kpi" ? "KPI" : "Chart"}
-      </Text>
-
       {widget.type === "kpi" ? (
-        <Text style={styles.kpiValue}>₹12.4L</Text>
-      ) : (
-        <ResponsiveContainer width="100%" height={120}>
-          <BarChart data={sampleData}>
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="value" fill="#3b82f6" />
-          </BarChart>
-        </ResponsiveContainer>
-      )}
+  (() => {
+    const kpi = getKpiData(
+      widgets.filter((w) => w.type === "kpi").findIndex((w) => w.id === widget.id)
+    );
+
+    return (
+      <>
+        <Text style={styles.widgetTitle}>{kpi.title}</Text>
+        <Text style={styles.kpiValue}>{kpi.value}</Text>
+        <Text style={styles.growth}>{kpi.growth}</Text>
+      </>
+    );
+  })()
+) : widget.type === "bar" ? (
+  <>
+    <Text style={styles.widgetTitle}>Bar Chart</Text>
+    <ResponsiveContainer width="100%" height={140}>
+      <BarChart data={sampleData}>
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="value" fill="#3b82f6" />
+      </BarChart>
+    </ResponsiveContainer>
+  </>
+) : widget.type === "line" ? (
+  <>
+    <Text style={styles.widgetTitle}>Line Chart</Text>
+    <ResponsiveContainer width="100%" height={140}>
+      <LineChart data={sampleData}>
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="value" stroke="#22c55e" />
+      </LineChart>
+    </ResponsiveContainer>
+  </>
+) : widget.type === "pie" ? (
+  <>
+    <Text style={styles.widgetTitle}>Donut Chart</Text>
+    <ResponsiveContainer width="100%" height={160}>
+      <PieChart>
+        <Pie data={sampleData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70}>
+          {sampleData.map((_, index) => (
+            <Cell key={index} fill={["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"][index % 5]} />
+          ))}
+        </Pie>
+        <Tooltip />
+      </PieChart>
+    </ResponsiveContainer>
+  </>
+) : (
+  <>
+    <Text style={styles.widgetTitle}>Map Visual</Text>
+    <View style={styles.mapBox}>
+      <Text style={styles.mapText}>🌍 Map Preview</Text>
+    </View>
+  </>
+)}
 
       {/* Resize Handle */}
       <TouchableOpacity
@@ -515,6 +576,21 @@ canvas: {
   borderColor: "#333",
   borderRadius: 12,
   overflow: "hidden",
+},
+
+mapBox: {
+  flex: 1,
+  backgroundColor: "#052e16",
+  borderRadius: 10,
+  justifyContent: "center",
+  alignItems: "center",
+  marginTop: 12,
+},
+
+mapText: {
+  color: "#fff",
+  fontSize: 22,
+  fontWeight: "bold",
 },
 
 });
