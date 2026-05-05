@@ -65,7 +65,62 @@ const sampleData = [
   { name: "May", value: 900 },
 ];
 
+const GRID_SIZE = 20;
 
+        const getNextPosition = () => {
+  const padding = 20;
+
+  if (widgets.length === 0) {
+    return { x: padding, y: padding };
+  }
+
+  const last = widgets[widgets.length - 1];
+
+  // move right
+       let nextX = last.x + last.w + padding;
+       let nextY = last.y;
+
+  // wrap to next row if overflow
+    if (nextX + 300 > 900) {
+       nextX = padding;
+      nextY = last.y + last.h + padding;
+    }
+
+    return { x: nextX, y: nextY };
+  };
+
+     const addKpi = () => {
+     const pos = getNextPosition();
+
+       setWidgets((prev) => [
+         ...prev,
+      {
+        id: `kpi-${Date.now()}`,
+        x: pos.x,
+        y: pos.y,
+        w: 220,
+        h: 130,
+        type: "kpi",
+      },
+    ]);
+  };
+
+
+      const addChart = () => {
+      const pos = getNextPosition();
+
+         setWidgets((prev) => [
+         ...prev,
+        {
+           id: `chart-${Date.now()}`,
+           x: pos.x,
+           y: pos.y,
+           w: 460,
+           h: 260,
+           type: "chart",
+        },
+      ]);
+    };
 
 
   const loadSavedDashboards = async () => {
@@ -83,8 +138,8 @@ const saveDashboard = async () => {
 
   const payload = {
     name: dashboardName,
-    layout,
-    widgets: ["kpi1", "kpi2", "bar", "line"],
+    layout: widgets,
+    widgets,
     dataset_id: null,
   };
 
@@ -118,7 +173,8 @@ const saveDashboard = async () => {
 
 const openDashboard = (dashboard: any) => {
   setDashboardName(dashboard.name);
-  setLayout(dashboard.layout || []);
+  setWidgets(dashboard.layout || []);
+  //setLayout(dashboard.layout || []);
   setCurrentDashboardId(dashboard._id);
 };
 
@@ -178,11 +234,12 @@ const deleteDashboard = async (dashboardId: string) => {
 </View>
 
       <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity style={styles.button} onPress={addKpi}>
           <Text style={styles.buttonText}>Add KPI</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button}>
+
+        <TouchableOpacity style={styles.button} onPress={addChart}>
           <Text style={styles.buttonText}>Add Chart</Text>
         </TouchableOpacity>
 
@@ -245,8 +302,7 @@ const deleteDashboard = async (dashboardId: string) => {
         //const dy = e.nativeEvent.pageY - startPos.y;
 
 
-        const GRID_SIZE = 20;
-
+        
         const dx = e.nativeEvent.pageX - startPos.x;
         const dy = e.nativeEvent.pageY - startPos.y;
 
