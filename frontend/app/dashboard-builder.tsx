@@ -135,13 +135,29 @@ const GRID_SIZE = 20;
 const getChartData = () => {
   if (!selectedDataset?.columns || !selectedDataset?.data) return sampleData;
 
-  const textCol = selectedDataset.columns.find((col: any) =>
-    selectedDataset.data.some((row: any) => isNaN(Number(row[col.name])))
+  const textCol =
+  selectedDataset.columns.find((col: any) =>
+    ["country", "category", "name", "product", "model"].includes(
+      col.name.toLowerCase()
+    )
+  )?.name ||
+  selectedDataset.columns.find((col: any) =>
+    selectedDataset.data.some((row: any) =>
+      isNaN(Number(row[col.name]))
+    )
   )?.name;
 
-  const numCol = selectedDataset.columns.find((col: any) =>
+ const numCol =
+  selectedDataset.columns.find((col: any) =>
+    ["sales", "price", "amount", "revenue", "quantity"].some((k) =>
+      col.name.toLowerCase().includes(k)
+    )
+  )?.name ||
+  selectedDataset.columns.find((col: any) =>
     selectedDataset.data.some(
-      (row: any) => row[col.name] !== "" && !isNaN(Number(row[col.name]))
+      (row: any) =>
+        row[col.name] !== "" &&
+        !isNaN(Number(row[col.name]))
     )
   )?.name;
 
