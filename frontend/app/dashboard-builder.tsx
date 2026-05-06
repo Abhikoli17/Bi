@@ -180,8 +180,14 @@ const getChartData = (widget: any) => {
 
   const metric =
     widget.config?.metric ||
-    selectedDataset.columns[1]?.name;
-
+    selectedDataset.columns.find((col: any) =>
+    selectedDataset.data.some(
+      (row: any) =>
+        row[col.name] !== "" &&
+        !isNaN(Number(row[col.name]))
+    )
+  )?.name;
+  
   const aggregation =
     widget.config?.aggregation || "SUM";
 
@@ -570,6 +576,35 @@ const createNewDashboard = () => {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Metric Selector */}
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  style={{ marginTop: 8 }}
+>
+  {selectedDataset?.columns?.map((col: any) => (
+    <TouchableOpacity
+      key={`metric-${col.name}`}
+      style={[
+        styles.selectorButton,
+        widget.config?.metric === col.name &&
+          styles.activeSelector,
+      ]}
+      onPress={() =>
+        updateWidgetConfig(
+          widget.id,
+          "metric",
+          col.name
+        )
+      }
+    >
+      <Text style={styles.selectorText}>
+        Y: {col.name}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</ScrollView>
 
       <View style={styles.aggRow}>
         {["SUM", "AVG", "COUNT"].map((agg) => (
