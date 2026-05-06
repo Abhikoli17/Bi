@@ -17,6 +17,7 @@ declare const require: any;
 const RGL = require("react-grid-layout");
 const ReactGridLayout = RGL.default || RGL;
 
+
 //import "react-grid-layout/css/styles.css";
 //import "react-resizable/css/styles.css";
 import {
@@ -59,6 +60,8 @@ const { token } = useAuthStore();
 const [savedDashboards, setSavedDashboards] = useState<any[]>([]);
 const [dashboardName, setDashboardName] = useState("My Dashboard");
 const [currentDashboardId, setCurrentDashboardId] = useState<string | null>(null);
+const [datasets, setDatasets] = useState<any[]>([]);
+const [selectedDataset, setSelectedDataset] = useState<any>(null);
 
 const sampleData = [
   { name: "Jan", value: 400 },
@@ -129,15 +132,83 @@ const GRID_SIZE = 20;
   ]);
 };
 
-const getKpiData = (index: number) => {
-  const kpis = [
-    { title: "Total Sales", value: "₹12.4L", growth: "↑ 18%" },
-    { title: "Customers", value: "2,430", growth: "↑ 9%" },
-    { title: "Revenue", value: "₹8.7L", growth: "↑ 14%" },
-    { title: "Orders", value: "1,280", growth: "↑ 6%" },
-  ];
+const getChartData = () => {
+  if (!selectedDataset?.columns || !selectedDataset?.data) return sampleData;
 
-  return kpis[index % kpis.length];
+  const textCol = selectedDataset.columns.find((col: any) =>
+    selectedDataset.data.some((row: any) => isNaN(Number(row[col.name])))
+  )?.name;
+
+  const numCol = selectedDataset.columns.find((col: any) =>
+    selectedDataset.data.some(
+      (row: any) => row[col.name] !== "" && !isNaN(Number(row[col.name]))
+    )
+  )?.name;
+
+  if (!textCol || !numCol) return sampleData;
+
+  const grouped: any = {};
+
+  selectedDataset.data.forEach((row: any) => {
+    const key = row[textCol] || "Unknown";
+    grouped[key] = (grouped[key] || 0) + Number(row[numCol] || 0);
+  });
+
+  return Object.keys(grouped).slice(0, 8).map((key) => ({
+    name: key,
+    value: Number(grouped[key].toFixed(2)),
+  }));
+};
+
+const getKpiData = (index: number) => {
+  if (!selectedDataset?.data || !selectedDataset?.columns) {
+    const fallback = [
+      { title: "Total Sales", value: "₹12.4L", growth: "Demo" },
+      { title: "Customers", value: "2,430", growth: "Demo" },
+      { title: "Revenue", value: "₹8.7L", growth: "Demo" },
+      { title: "Orders", value: "1,280", growth: "Demo" },
+    ];
+
+    return fallback[index % fallback.length];
+  }
+
+  const numericCols = selectedDataset.columns.filter((col: any) =>
+    selectedDataset.data.some(
+      (row: any) => row[col.name] !== "" && !isNaN(Number(row[col.name]))
+    )
+  );
+
+  const col = numericCols[index % Math.max(numericCols.length, 1)];
+
+  if (!col) {
+    return {
+      title: "Rows",
+      value: String(selectedDataset.data.length),
+      growth: "Live",
+    };
+  }
+
+  const total = selectedDataset.data.reduce(
+    (sum: number, row: any) => sum + Number(row[col.name] || 0),
+    0
+  );
+
+  return {
+    title: `Total ${col.name}`,
+    value: total.toLocaleString(),
+    growth: "Live",
+  };
+};
+
+const loadDatasets = async () => {
+  if (!token) return;
+
+  const data = await apiCall("/api/datasets", {}, token);
+  setDatasets(data);
+
+  if (data.length > 0 && !selectedDataset) {
+    setSelectedDataset(data[0]);
+  }
 };
 
   const loadSavedDashboards = async () => {
@@ -145,6 +216,7 @@ const getKpiData = (index: number) => {
 
   const data = await apiCall("/api/dashboard-layouts", {}, token);
   setSavedDashboards(data);
+
 };
 
 const saveDashboard = async () => {
@@ -238,8 +310,11 @@ const createNewDashboard = () => {
 };
 
     useEffect(() => {
-       if (token) loadSavedDashboards();
-    }, [token]);
+  if (token) {
+    loadSavedDashboards();
+    loadDatasets();
+  }
+}, [token]);
 
   return (
     <ScrollView style={styles.page}>
@@ -279,6 +354,23 @@ const createNewDashboard = () => {
       <TouchableOpacity style={styles.button} onPress={createNewDashboard}>
          <Text style={styles.buttonText}>New Dashboard</Text>
       </TouchableOpacity>
+
+      <Text style={styles.sectionTitle}>Select Dataset</Text>
+
+<View style={styles.savedList}>
+  {datasets.map((dataset) => (
+    <TouchableOpacity
+      key={dataset._id}
+      style={[
+        styles.savedItem,
+        selectedDataset?._id === dataset._id && { borderColor: "#2563eb" },
+      ]}
+      onPress={() => setSelectedDataset(dataset)}
+    >
+      <Text style={styles.savedText}>{dataset.name}</Text>
+    </TouchableOpacity>
+  ))}
+</View>
 
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.button} onPress={addKpi}>
@@ -392,7 +484,7 @@ const createNewDashboard = () => {
   <>
     <Text style={styles.widgetTitle}>Bar Chart</Text>
     <ResponsiveContainer width="100%" height={140}>
-      <BarChart data={sampleData}>
+      <BarChart data={getChartData()}>
         <XAxis dataKey="name" />
         <YAxis />
         <Tooltip />
@@ -404,7 +496,7 @@ const createNewDashboard = () => {
   <>
     <Text style={styles.widgetTitle}>Line Chart</Text>
     <ResponsiveContainer width="100%" height={140}>
-      <LineChart data={sampleData}>
+      <LineChart data={getChartData()}>
         <XAxis dataKey="name" />
         <YAxis />
         <Tooltip />
@@ -417,8 +509,8 @@ const createNewDashboard = () => {
     <Text style={styles.widgetTitle}>Donut Chart</Text>
     <ResponsiveContainer width="100%" height={160}>
       <PieChart>
-        <Pie data={sampleData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70}>
-          {sampleData.map((_, index) => (
+        <Pie data={getChartData()} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70}>
+          {getChartData().map((_, index) => (
             <Cell key={index} fill={["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"][index % 5]} />
           ))}
         </Pie>
