@@ -48,7 +48,18 @@ export default function DashboardBuilder() {
   const [widgets, setWidgets] = useState([
   { id: "kpi1", x: 20, y: 20, w: 220, h: 130, type: "kpi" },
   { id: "kpi2", x: 260, y: 20, w: 220, h: 130, type: "kpi" },
-  { id: "bar1", x: 20, y: 180, w: 460, h: 260, type: "bar" },
+  { id: "bar1", 
+    x: 20, 
+    y: 180, 
+    w: 460, 
+    h: 260, 
+    type: "bar",
+   config: {
+    xAxis: "",
+    metric: "",
+    aggregation: "SUM",
+  },
+},
 ]);
 
 const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -128,53 +139,99 @@ const GRID_SIZE = 20;
       w: 460,
       h: 260,
       type: nextType,
+
+      config: {
+        xAxis: "",
+        metric: "",
+        aggregation: "SUM",
+      },
     },
   ]);
 };
 
-const getChartData = () => {
-  if (!selectedDataset?.columns || !selectedDataset?.data) return sampleData;
+const updateWidgetConfig = (
+  widgetId: string,
+  field: string,
+  value: string
+) => {
+  setWidgets((prev: any[]) =>
+    prev.map((widget) =>
+      widget.id === widgetId
+        ? {
+            ...widget,
+            config: {
+              ...widget.config,
+              [field]: value,
+            },
+          }
+        : widget
+    )
+  );
+};
 
-  const textCol =
-  selectedDataset.columns.find((col: any) =>
-    ["country", "category", "name", "product", "model"].includes(
-      col.name.toLowerCase()
-    )
-  )?.name ||
-  selectedDataset.columns.find((col: any) =>
-    selectedDataset.data.some((row: any) =>
-      isNaN(Number(row[col.name]))
-    )
-  )?.name;
+const getChartData = (widget: any) => {
+  if (!selectedDataset?.columns || !selectedDataset?.data) {
+    return sampleData;
+  }
 
- const numCol =
-  selectedDataset.columns.find((col: any) =>
-    ["sales", "price", "amount", "revenue", "quantity"].some((k) =>
-      col.name.toLowerCase().includes(k)
-    )
-  )?.name ||
-  selectedDataset.columns.find((col: any) =>
-    selectedDataset.data.some(
-      (row: any) =>
-        row[col.name] !== "" &&
-        !isNaN(Number(row[col.name]))
-    )
-  )?.name;
+  const xAxis =
+    widget.config?.xAxis ||
+    selectedDataset.columns[0]?.name;
 
-  if (!textCol || !numCol) return sampleData;
+  const metric =
+    widget.config?.metric ||
+    selectedDataset.columns[1]?.name;
+
+  const aggregation =
+    widget.config?.aggregation || "SUM";
 
   const grouped: any = {};
 
   selectedDataset.data.forEach((row: any) => {
-    const key = row[textCol] || "Unknown";
-    grouped[key] = (grouped[key] || 0) + Number(row[numCol] || 0);
+    const key = row[xAxis] || "Unknown";
+
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+
+    grouped[key].push(Number(row[metric] || 0));
   });
 
-  return Object.keys(grouped).slice(0, 8).map((key) => ({
-    name: key,
-    value: Number(grouped[key].toFixed(2)),
-  }));
+  return Object.keys(grouped)
+    .slice(0, 8)
+    .map((key) => {
+      const values = grouped[key];
+
+      let value = 0;
+
+      if (aggregation === "SUM") {
+        value = values.reduce(
+          (a: number, b: number) => a + b,
+          0
+        );
+      }
+
+      if (aggregation === "AVG") {
+        value =
+          values.reduce(
+            (a: number, b: number) => a + b,
+            0
+          ) / values.length;
+      }
+
+      if (aggregation === "COUNT") {
+        value = values.length;
+      }
+
+      return {
+        name: key,
+        value: Number(value.toFixed(2)),
+      };
+    });
 };
+
+ 
+
 
 const getKpiData = (index: number) => {
   if (!selectedDataset?.data || !selectedDataset?.columns) {
@@ -482,7 +539,7 @@ const createNewDashboard = () => {
         setResizingId(null);
       }}
     >
-      {widget.type === "kpi" ? (
+     {widget.type === "kpi" ? (
   (() => {
     const kpi = getKpiData(
       widgets.filter((w) => w.type === "kpi").findIndex((w) => w.id === widget.id)
@@ -496,50 +553,95 @@ const createNewDashboard = () => {
       </>
     );
   })()
-) : widget.type === "bar" ? (
-  <>
-    <Text style={styles.widgetTitle}>Bar Chart</Text>
-    <ResponsiveContainer width="100%" height={140}>
-      <BarChart data={getChartData()}>
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Bar dataKey="value" fill="#3b82f6" />
-      </BarChart>
-    </ResponsiveContainer>
-  </>
-) : widget.type === "line" ? (
-  <>
-    <Text style={styles.widgetTitle}>Line Chart</Text>
-    <ResponsiveContainer width="100%" height={140}>
-      <LineChart data={getChartData()}>
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Line type="monotone" dataKey="value" stroke="#22c55e" />
-      </LineChart>
-    </ResponsiveContainer>
-  </>
-) : widget.type === "pie" ? (
-  <>
-    <Text style={styles.widgetTitle}>Donut Chart</Text>
-    <ResponsiveContainer width="100%" height={160}>
-      <PieChart>
-        <Pie data={getChartData()} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70}>
-          {getChartData().map((_, index) => (
-            <Cell key={index} fill={["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"][index % 5]} />
-          ))}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
-  </>
 ) : (
   <>
-    <Text style={styles.widgetTitle}>Map Visual</Text>
-    <View style={styles.mapBox}>
-      <Text style={styles.mapText}>🌍 Map Preview</Text>
+    <View style={styles.configRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {selectedDataset?.columns?.map((col: any) => (
+          <TouchableOpacity
+            key={col.name}
+            style={[
+              styles.selectorButton,
+              widget.config?.xAxis === col.name && styles.activeSelector,
+            ]}
+            onPress={() => updateWidgetConfig(widget.id, "xAxis", col.name)}
+          >
+            <Text style={styles.selectorText}>X: {col.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <View style={styles.aggRow}>
+        {["SUM", "AVG", "COUNT"].map((agg) => (
+          <TouchableOpacity
+            key={agg}
+            style={[
+              styles.selectorButton,
+              widget.config?.aggregation === agg && styles.activeSelector,
+            ]}
+            onPress={() => updateWidgetConfig(widget.id, "aggregation", agg)}
+          >
+            <Text style={styles.selectorText}>{agg}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
+
+    {widget.type === "bar" ? (
+      <>
+        <Text style={styles.widgetTitle}>Bar Chart</Text>
+        <ResponsiveContainer width="100%" height={140}>
+          <BarChart data={getChartData(widget)}>
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="value" fill="#3b82f6" />
+          </BarChart>
+        </ResponsiveContainer>
+      </>
+    ) : widget.type === "line" ? (
+      <>
+        <Text style={styles.widgetTitle}>Line Chart</Text>
+        <ResponsiveContainer width="100%" height={140}>
+          <LineChart data={getChartData(widget)}>
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey="value" stroke="#22c55e" />
+          </LineChart>
+        </ResponsiveContainer>
+      </>
+    ) : widget.type === "pie" ? (
+      <>
+        <Text style={styles.widgetTitle}>Donut Chart</Text>
+        <ResponsiveContainer width="100%" height={160}>
+          <PieChart>
+            <Pie
+              data={getChartData(widget)}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={45}
+              outerRadius={70}
+            >
+              {getChartData(widget).map((_, index) => (
+                <Cell
+                  key={index}
+                  fill={["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"][index % 5]}
+                />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </>
+    ) : (
+      <>
+        <Text style={styles.widgetTitle}>Map Visual</Text>
+        <View style={styles.mapBox}>
+          <Text style={styles.mapText}>🌍 Map Preview</Text>
+        </View>
+      </>
+    )}
   </>
 )}
 
@@ -556,9 +658,6 @@ const createNewDashboard = () => {
       />
     </View>
   ))}
-
-
-        
       </View>
     </ScrollView>
   );
@@ -729,6 +828,36 @@ mapText: {
   color: "#fff",
   fontSize: 22,
   fontWeight: "bold",
+},
+
+configRow: {
+  marginBottom: 10,
+},
+
+aggRow: {
+  flexDirection: "row",
+  marginTop: 8,
+  gap: 6,
+},
+
+selectorButton: {
+  backgroundColor: "#1e293b",
+  borderWidth: 1,
+  borderColor: "#334155",
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  marginRight: 6,
+},
+
+activeSelector: {
+  backgroundColor: "#2563eb",
+  borderColor: "#2563eb",
+},
+
+selectorText: {
+  color: "#fff",
+  fontSize: 12,
 },
 
 });
