@@ -171,6 +171,7 @@ const saveDashboard = async () => {
     );
 
     Alert.alert("Saved", "Dashboard updated");
+    loadSavedDashboards();
     return updated;
   }
 
@@ -211,6 +212,31 @@ const deleteDashboard = async (dashboardId: string) => {
   loadSavedDashboards();
 };
 
+const createNewDashboard = () => {
+  setCurrentDashboardId(null);
+
+  setDashboardName("New Dashboard");
+
+  setWidgets([
+    {
+      id: `kpi-${Date.now()}`,
+      x: 20,
+      y: 20,
+      w: 220,
+      h: 130,
+      type: "kpi",
+    },
+    {
+      id: `bar-${Date.now()}`,
+      x: 20,
+      y: 180,
+      w: 460,
+      h: 260,
+      type: "bar",
+    },
+  ]);
+};
+
     useEffect(() => {
        if (token) loadSavedDashboards();
     }, [token]);
@@ -249,6 +275,10 @@ const deleteDashboard = async (dashboardId: string) => {
     </View>
   ))}
 </View>
+
+      <TouchableOpacity style={styles.button} onPress={createNewDashboard}>
+         <Text style={styles.buttonText}>New Dashboard</Text>
+      </TouchableOpacity>
 
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.button} onPress={addKpi}>
