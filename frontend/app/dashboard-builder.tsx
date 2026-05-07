@@ -116,8 +116,8 @@ const GRID_SIZE = 20;
         id: `kpi-${Date.now()}`,
         x: pos.x,
         y: pos.y,
-        w: 220,
-        h: 130,
+        w: 260,
+        h: 150,
         type: "kpi",
       },
     ]);
@@ -138,7 +138,7 @@ const GRID_SIZE = 20;
       x: pos.x,
       y: pos.y,
       w: 460,
-      h: 260,
+      h: 380,
       type: nextType,
 
       config: {
@@ -648,7 +648,7 @@ const createNewDashboard = () => {
     {widget.type === "bar" ? (
       <>
         <Text style={styles.widgetTitle}>Bar Chart</Text>
-        <ResponsiveContainer width="100%" height={140}>
+        <ResponsiveContainer width="100%" height={220}>
           <BarChart data={getChartData(widget)}>
             <XAxis dataKey="name" />
             <YAxis />
@@ -660,7 +660,7 @@ const createNewDashboard = () => {
     ) : widget.type === "line" ? (
       <>
         <Text style={styles.widgetTitle}>Line Chart</Text>
-        <ResponsiveContainer width="100%" height={140}>
+        <ResponsiveContainer width="100%" height={220}>
           <LineChart data={getChartData(widget)}>
             <XAxis dataKey="name" />
             <YAxis />
@@ -672,7 +672,7 @@ const createNewDashboard = () => {
     ) : widget.type === "pie" ? (
       <>
         <Text style={styles.widgetTitle}>Donut Chart</Text>
-        <ResponsiveContainer width="100%" height={160}>
+        <ResponsiveContainer width="100%" height={220}>
           <PieChart>
             <Pie
               data={getChartData(widget)}
@@ -871,6 +871,7 @@ canvas: {
   borderColor: "#333",
   borderRadius: 12,
   overflow: "hidden",
+  padding: 20,
 },
 
 mapBox: {
@@ -920,26 +921,25 @@ selectorText: {
 
 configLabel: {
   color: "#94a3b8",
-  fontSize: 12,
-  marginBottom: 4,
-  marginTop: 6,
+  fontSize: 10,
+  marginBottom: 2,
+  marginTop: 4,
 },
 
 dropdownBox: {
-  backgroundColor: "#020617",
-  borderWidth: 1,
-  borderColor: "#334155",
-  borderRadius: 8,
-  padding: 6,
-  marginBottom: 8,
+  flexDirection: "row",
+  maxHeight: 42,
+  marginBottom: 6,
 },
 
 dropdownOption: {
   backgroundColor: "#1e293b",
-  paddingHorizontal: 10,
-  paddingVertical: 6,
+  paddingHorizontal: 8,
+  paddingVertical: 4,
   borderRadius: 6,
   marginRight: 6,
+  height: 28,
+  justifyContent: "center",
 },
 
 });
