@@ -11,15 +11,7 @@ import {
 
 declare const require: any;
 
-//const ReactGridLayout = require("react-grid-layout");
-//const Responsive = ReactGridLayout.Responsive || ReactGridLayout.default?.Responsive;
-//const WidthProvider = ReactGridLayout.WidthProvider || ReactGridLayout.default?.WidthProvider;
-const RGL = require("react-grid-layout");
-const ReactGridLayout = RGL.default || RGL;
 
-
-//import "react-grid-layout/css/styles.css";
-//import "react-resizable/css/styles.css";
 import {
   BarChart,
   Bar,
@@ -38,35 +30,44 @@ import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
 
 export default function DashboardBuilder() {
-  const [layout, setLayout] = useState([
-    { i: "kpi1", x: 0, y: 0, w: 3, h: 2 },
-    { i: "kpi2", x: 3, y: 0, w: 3, h: 2 },
-    { i: "bar", x: 0, y: 2, w: 6, h: 5 },
-    { i: "line", x: 6, y: 2, w: 6, h: 5 },
-  ]);
+ 
 
-  const [widgets, setWidgets] = useState([
-  { id: "kpi1", x: 20, y: 20, w: 220, h: 130, type: "kpi" },
-  { id: "kpi2", x: 260, y: 20, w: 220, h: 130, type: "kpi" },
-  { id: "bar1", 
-    x: 20, 
-    y: 180, 
-    w: 460, 
-    h: 260, 
-    type: "bar",
-   config: {
-    xAxis: "",
-    metric: "",
-    aggregation: "SUM",
+  const [widgets, setWidgets] = useState<any[]>([
+  {
+    id: "kpi1",
+    x: 20,
+    y: 20,
+    w: 220,
+    h: 130,
+    type: "kpi",
   },
-},
+  {
+    id: "kpi2",
+    x: 260,
+    y: 20,
+    w: 220,
+    h: 130,
+    type: "kpi",
+  },
+  {
+    id: "bar1",
+    x: 20,
+    y: 180,
+    w: 460,
+    h: 260,
+    type: "bar",
+    config: {
+      xAxis: "",
+      metric: "",
+      aggregation: "SUM",
+    },
+  },
 ]);
 
 const [draggingId, setDraggingId] = useState<string | null>(null);
 const [resizingId, setResizingId] = useState<string | null>(null);
 const [startPos, setStartPos] = useState({ x: 0, y: 0 });
 
-//const ResponsiveGridLayout = WidthProvider(Responsive);
 const { token } = useAuthStore();
 const [savedDashboards, setSavedDashboards] = useState<any[]>([]);
 const [dashboardName, setDashboardName] = useState("My Dashboard");
@@ -200,7 +201,8 @@ const getChartData = (widget: any) => {
       grouped[key] = [];
     }
 
-    grouped[key].push(Number(row[metric] || 0));
+    const num = parseFloat(row[metric]);
+    grouped[key].push(isNaN(num) ? 0 : num);
   });
 
   return Object.keys(grouped)
@@ -268,9 +270,13 @@ const getKpiData = (index: number) => {
   }
 
   const total = selectedDataset.data.reduce(
-    (sum: number, row: any) => sum + Number(row[col.name] || 0),
-    0
-  );
+  (sum: number, row: any) => {
+    const val = parseFloat(row[col.name]);
+
+    return sum + (isNaN(val) ? 0 : val);
+  },
+  0
+);
 
   return {
     title: `Total ${col.name}`,
@@ -561,33 +567,50 @@ const createNewDashboard = () => {
   })()
 ) : (
   <>
-    <View style={styles.configRow}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {selectedDataset?.columns?.map((col: any) => (
-          <TouchableOpacity
-            key={col.name}
-            style={[
-              styles.selectorButton,
-              widget.config?.xAxis === col.name && styles.activeSelector,
-            ]}
-            onPress={() => updateWidgetConfig(widget.id, "xAxis", col.name)}
-          >
-            <Text style={styles.selectorText}>X: {col.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+    <Text style={styles.configLabel}>X Axis</Text>
 
-      {/* Metric Selector */}
 <ScrollView
   horizontal
   showsHorizontalScrollIndicator={false}
-  style={{ marginTop: 8 }}
+  style={styles.dropdownBox}
 >
   {selectedDataset?.columns?.map((col: any) => (
     <TouchableOpacity
-      key={`metric-${col.name}`}
+      key={`x-${col.name}`}
       style={[
-        styles.selectorButton,
+        styles.dropdownOption,
+        widget.config?.xAxis === col.name &&
+          styles.activeSelector,
+      ]}
+      onPress={() =>
+        updateWidgetConfig(
+          widget.id,
+          "xAxis",
+          col.name
+        )
+      }
+    >
+      <Text style={styles.selectorText}>
+        {col.name}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</ScrollView>
+
+<Text style={styles.configLabel}>
+  Y Axis / Metric
+</Text>
+
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  style={styles.dropdownBox}
+>
+  {selectedDataset?.columns?.map((col: any) => (
+    <TouchableOpacity
+      key={`y-${col.name}`}
+      style={[
+        styles.dropdownOption,
         widget.config?.metric === col.name &&
           styles.activeSelector,
       ]}
@@ -600,7 +623,7 @@ const createNewDashboard = () => {
       }
     >
       <Text style={styles.selectorText}>
-        Y: {col.name}
+        {col.name}
       </Text>
     </TouchableOpacity>
   ))}
@@ -620,7 +643,7 @@ const createNewDashboard = () => {
           </TouchableOpacity>
         ))}
       </View>
-    </View>
+    
 
     {widget.type === "bar" ? (
       <>
@@ -893,6 +916,30 @@ activeSelector: {
 selectorText: {
   color: "#fff",
   fontSize: 12,
+},
+
+configLabel: {
+  color: "#94a3b8",
+  fontSize: 12,
+  marginBottom: 4,
+  marginTop: 6,
+},
+
+dropdownBox: {
+  backgroundColor: "#020617",
+  borderWidth: 1,
+  borderColor: "#334155",
+  borderRadius: 8,
+  padding: 6,
+  marginBottom: 8,
+},
+
+dropdownOption: {
+  backgroundColor: "#1e293b",
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 6,
+  marginRight: 6,
 },
 
 });
