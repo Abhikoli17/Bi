@@ -98,6 +98,10 @@ const GRID_SIZE = 20;
        let nextX = last.x + last.w + padding;
        let nextY = last.y;
 
+        if (last.type === "kpi") {
+          nextY = 220;
+        }
+
   // wrap to next row if overflow
     if (nextX + 300 > 900) {
        nextX = padding;
@@ -137,8 +141,8 @@ const GRID_SIZE = 20;
       id: `${nextType}-${Date.now()}`,
       x: pos.x,
       y: pos.y,
-      w: 460,
-      h: 380,
+      w: 700,
+      h: 420,
       type: nextType,
 
       config: {
@@ -484,6 +488,7 @@ const createNewDashboard = () => {
           top: widget.y,
           width: widget.w,
           height: widget.h,
+          paddingBottom: 20,
         },
       ]}
       onStartShouldSetResponder={() => true}
@@ -567,83 +572,73 @@ const createNewDashboard = () => {
   })()
 ) : (
   <>
-    <Text style={styles.configLabel}>X Axis</Text>
+   <View style={styles.controlBar}>
 
-<ScrollView
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  style={styles.dropdownBox}
->
-  {selectedDataset?.columns?.map((col: any) => (
-    <TouchableOpacity
-      key={`x-${col.name}`}
-      style={[
-        styles.dropdownOption,
-        widget.config?.xAxis === col.name &&
-          styles.activeSelector,
-      ]}
-      onPress={() =>
-        updateWidgetConfig(
-          widget.id,
-          "xAxis",
-          col.name
-        )
-      }
-    >
-      <Text style={styles.selectorText}>
-        {col.name}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</ScrollView>
+  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    {selectedDataset?.columns?.map((col: any) => (
+      <TouchableOpacity
+        key={`x-${col.name}`}
+        style={[
+          styles.dropdownOption,
+          widget.config?.xAxis === col.name &&
+            styles.activeSelector,
+        ]}
+        onPress={() =>
+          updateWidgetConfig(widget.id, "xAxis", col.name)
+        }
+      >
+        <Text style={styles.selectorText}>
+          X: {col.name}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </ScrollView>
 
-<Text style={styles.configLabel}>
-  Y Axis / Metric
-</Text>
+  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    {selectedDataset?.columns?.map((col: any) => (
+      <TouchableOpacity
+        key={`y-${col.name}`}
+        style={[
+          styles.dropdownOption,
+          widget.config?.metric === col.name &&
+            styles.activeSelector,
+        ]}
+        onPress={() =>
+          updateWidgetConfig(widget.id, "metric", col.name)
+        }
+      >
+        <Text style={styles.selectorText}>
+          Y: {col.name}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </ScrollView>
 
-<ScrollView
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  style={styles.dropdownBox}
->
-  {selectedDataset?.columns?.map((col: any) => (
-    <TouchableOpacity
-      key={`y-${col.name}`}
-      style={[
-        styles.dropdownOption,
-        widget.config?.metric === col.name &&
-          styles.activeSelector,
-      ]}
-      onPress={() =>
-        updateWidgetConfig(
-          widget.id,
-          "metric",
-          col.name
-        )
-      }
-    >
-      <Text style={styles.selectorText}>
-        {col.name}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</ScrollView>
+  <View style={styles.aggRow}>
+    {["SUM", "AVG", "COUNT"].map((agg) => (
+      <TouchableOpacity
+        key={agg}
+        style={[
+          styles.selectorButton,
+          widget.config?.aggregation === agg &&
+            styles.activeSelector,
+        ]}
+        onPress={() =>
+          updateWidgetConfig(
+            widget.id,
+            "aggregation",
+            agg
+          )
+        }
+      >
+        <Text style={styles.selectorText}>
+          {agg}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
 
-      <View style={styles.aggRow}>
-        {["SUM", "AVG", "COUNT"].map((agg) => (
-          <TouchableOpacity
-            key={agg}
-            style={[
-              styles.selectorButton,
-              widget.config?.aggregation === agg && styles.activeSelector,
-            ]}
-            onPress={() => updateWidgetConfig(widget.id, "aggregation", agg)}
-          >
-            <Text style={styles.selectorText}>{agg}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    
+</View>
 
     {widget.type === "bar" ? (
       <>
@@ -940,6 +935,11 @@ dropdownOption: {
   marginRight: 6,
   height: 28,
   justifyContent: "center",
+},
+
+controlBar: {
+  marginBottom: 10,
+  gap: 6,
 },
 
 });
