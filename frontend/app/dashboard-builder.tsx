@@ -28,6 +28,7 @@ import {
 
 import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
+import { config } from "process";
 
 export default function DashboardBuilder() {
  
@@ -102,6 +103,10 @@ const GRID_SIZE = 20;
           nextY = 220;
         }
 
+        if (last.type !== "kpi") {
+          nextY = last.y;
+        }
+
   // wrap to next row if overflow
     if (nextX + 300 > 900) {
        nextX = padding;
@@ -141,8 +146,8 @@ const GRID_SIZE = 20;
       id: `${nextType}-${Date.now()}`,
       x: pos.x,
       y: pos.y,
-      w: 700,
-      h: 420,
+      w: 820,
+      h: 480,
       type: nextType,
 
       config: {
@@ -191,7 +196,7 @@ const getChartData = (widget: any) => {
         row[col.name] !== "" &&
         !isNaN(Number(row[col.name]))
     )
-  )?.name;
+  )?.name || selectedDataset.columns[1]?.name;
   
   const aggregation =
     widget.config?.aggregation || "SUM";
@@ -383,17 +388,23 @@ const createNewDashboard = () => {
       id: `kpi-${Date.now()}`,
       x: 20,
       y: 20,
-      w: 220,
-      h: 130,
+      w: 260,
+      h: 150,
       type: "kpi",
     },
     {
       id: `bar-${Date.now()}`,
       x: 20,
       y: 180,
-      w: 460,
-      h: 260,
+      w: 700,
+      h: 420,
       type: "bar",
+      
+      config: {
+        XAxis: "",
+        metric: "",
+        aggregation: "sum",
+      }
     },
   ]);
 };
@@ -645,8 +656,8 @@ const createNewDashboard = () => {
         <Text style={styles.widgetTitle}>Bar Chart</Text>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={getChartData(widget)}>
-            <XAxis dataKey="name" />
-            <YAxis />
+            <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+            <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
             <Tooltip />
             <Bar dataKey="value" fill="#3b82f6" />
           </BarChart>
@@ -657,8 +668,8 @@ const createNewDashboard = () => {
         <Text style={styles.widgetTitle}>Line Chart</Text>
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={getChartData(widget)}>
-            <XAxis dataKey="name" />
-            <YAxis />
+             <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+            <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
             <Tooltip />
             <Line type="monotone" dataKey="value" stroke="#22c55e" />
           </LineChart>
@@ -673,8 +684,8 @@ const createNewDashboard = () => {
               data={getChartData(widget)}
               dataKey="value"
               nameKey="name"
-              innerRadius={45}
-              outerRadius={70}
+              innerRadius={60}
+              outerRadius={95}
             >
               {getChartData(widget).map((_, index) => (
                 <Cell
@@ -923,14 +934,14 @@ configLabel: {
 
 dropdownBox: {
   flexDirection: "row",
-  maxHeight: 42,
-  marginBottom: 6,
+  maxHeight: 40,
+  marginBottom: 8,
 },
 
 dropdownOption: {
   backgroundColor: "#1e293b",
-  paddingHorizontal: 8,
-  paddingVertical: 4,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
   borderRadius: 6,
   marginRight: 6,
   height: 28,
@@ -938,8 +949,8 @@ dropdownOption: {
 },
 
 controlBar: {
-  marginBottom: 10,
-  gap: 6,
+  marginBottom: 14,
+  gap: 8,
 },
 
 });
