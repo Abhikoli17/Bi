@@ -147,7 +147,7 @@ const GRID_SIZE = 20;
       x: pos.x,
       y: pos.y,
       w: 820,
-      h: 480,
+      h: 620,
       type: nextType,
 
       config: {
@@ -583,7 +583,7 @@ const createNewDashboard = () => {
   })()
 ) : (
   <>
-   <View style={styles.controlBar}>
+   <ScrollView horizontal={false} showsVerticalScrollIndicator={false} style={styles.controlBar} >
 
   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
     {selectedDataset?.columns?.map((col: any) => (
@@ -649,11 +649,14 @@ const createNewDashboard = () => {
     ))}
   </View>
 
-</View>
+</ScrollView>
 
+<View style={styles.chartArea}>
     {widget.type === "bar" ? (
       <>
-        <Text style={styles.widgetTitle}>Bar Chart</Text>
+        <Text style={[ styles.widgetTitle, { marginTop: 10, marginBottom: 10 }, ]}>
+          Bar Chart
+        </Text>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={getChartData(widget)}>
             <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} />
@@ -662,10 +665,13 @@ const createNewDashboard = () => {
             <Bar dataKey="value" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
+      
       </>
     ) : widget.type === "line" ? (
       <>
-        <Text style={styles.widgetTitle}>Line Chart</Text>
+        <Text style={[ styles.widgetTitle, { marginTop: 10, marginBottom: 10 }, ]}>
+          Line Chart
+        </Text>
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={getChartData(widget)}>
              <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} />
@@ -677,9 +683,11 @@ const createNewDashboard = () => {
       </>
     ) : widget.type === "pie" ? (
       <>
-        <Text style={styles.widgetTitle}>Donut Chart</Text>
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
+       <Text style={[ styles.widgetTitle, { marginTop: 10, marginBottom: 10 }, ]}>
+          Donut Chart
+        </Text>
+        <ResponsiveContainer width="100%" height={320}>
+          <PieChart margin={{ top: 20 }}>
             <Pie
               data={getChartData(widget)}
               dataKey="value"
@@ -700,12 +708,15 @@ const createNewDashboard = () => {
       </>
     ) : (
       <>
-        <Text style={styles.widgetTitle}>Map Visual</Text>
+        <Text style={[ styles.widgetTitle, { marginTop: 10, marginBottom: 10 }, ]}>
+          Map Visual
+        </Text>
         <View style={styles.mapBox}>
           <Text style={styles.mapText}>🌍 Map Preview</Text>
         </View>
       </>
     )}
+    </View>
   </>
 )}
 
@@ -848,6 +859,8 @@ deleteText: {
 widget: {
   position: "absolute",
   backgroundColor: "#0f172a",
+  display: "flex",
+  flexDirection: "column",
   borderWidth: 1,
   borderColor: "#334155",
   borderRadius: 12,
@@ -949,8 +962,15 @@ dropdownOption: {
 },
 
 controlBar: {
-  marginBottom: 14,
+  marginBottom: 18,
   gap: 8,
+  maxHeight: 150,
+},
+
+chartArea: {
+  flex: 1,
+  marginTop: 10,
+  justifyContent: "center",
 },
 
 });
