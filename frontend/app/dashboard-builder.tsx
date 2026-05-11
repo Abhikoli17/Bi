@@ -28,7 +28,7 @@ import {
 
 import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
-import { config } from "process";
+//import { config } from "process";
 
 export default function DashboardBuilder() {
  
@@ -439,8 +439,8 @@ const createNewDashboard = () => {
 }, [token]);
 
   return (
-    <ScrollView style={styles.page} horizontal>
-      <View style={styles.appContainer}>
+    <ScrollView style={styles.page}>
+      <View style={styles.mainLayout}>
         <View style={styles.header}>
         <Text style={styles.title}>Dashboard Builder</Text>
         <Text style={styles.subtitle}>Drag, resize, and arrange visuals like Power BI</Text>
@@ -505,14 +505,11 @@ const createNewDashboard = () => {
 
 </View>
 
-      
-
-
         <TouchableOpacity style={styles.button} onPress={addChart}>
           <Text style={styles.buttonText}>Add Chart</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.saveButton}>
+        <TouchableOpacity style={styles.saveButton} onPress={saveDashboard}>
           <Text style={styles.buttonText}>Save Layout</Text>
         </TouchableOpacity>
       </View>
@@ -984,7 +981,8 @@ resizeHandle: {
 canvas: {
   position: "relative",
   minHeight: 800,
-  width: 1600,
+  minWidth: 1600,
+  flex : 1,
   backgroundColor: "#111827",
   borderWidth: 1,
   borderColor: "#333",
@@ -1073,16 +1071,14 @@ chartArea: {
   justifyContent: "center",
 },
 
-appContainer: {
-  flexDirection: "row",
+mainLayout: {
   flex: 1,
+  flexDirection: "row",
 },
 
 leftSidebar: {
   width: 260,
-  height: "100%",
   backgroundColor: "#0f172a",
-  borderRightWidth: 1,
   borderColor: "#1e293b",
   padding: 12,
 },
@@ -1093,10 +1089,8 @@ centerCanvas: {
 },
 
 rightSidebar: {
-  width: 320,
-  height: "100%",
+  width: 280,
   backgroundColor: "#0f172a",
-  borderLeftWidth: 1,
   borderColor: "#1e293b",
   padding: 12,
 },
@@ -1138,5 +1132,16 @@ fieldItem: {
 fieldText: {
   color: "#fff",
 },
+
+topBar: {
+  height: 70,
+  backgroundColor: "#0f172a",
+  borderBottomWidth: 1,
+  borderBottomColor: "#1e293b",
+  paddingHorizontal: 16,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+}
 
 });
