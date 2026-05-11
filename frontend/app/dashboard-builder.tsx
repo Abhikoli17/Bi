@@ -159,6 +159,28 @@ const GRID_SIZE = 20;
   ]);
 };
 
+const addSpecificChart = (type: string) => {
+  const pos = getNextPosition();
+
+  setWidgets((prev) => [
+    ...prev,
+    {
+      id: `${type}-${Date.now()}`,
+      x: pos.x,
+      y: pos.y,
+      w: 700,
+      h: 420,
+      type,
+
+      config: {
+        xAxis: "",
+        metric: "",
+        aggregation: "SUM",
+      },
+    },
+  ]);
+};
+
 const updateWidgetConfig = (
   widgetId: string,
   field: string,
@@ -417,11 +439,12 @@ const createNewDashboard = () => {
 }, [token]);
 
   return (
-    <ScrollView style={styles.page}>
-      <View style={styles.header}>
+    <ScrollView style={styles.page} horizontal>
+      <View style={styles.appContainer}>
+        <View style={styles.header}>
         <Text style={styles.title}>Dashboard Builder</Text>
         <Text style={styles.subtitle}>Drag, resize, and arrange visuals like Power BI</Text>
-      </View>
+        </View>
 
       <TextInput
         value={dashboardName}
@@ -455,27 +478,34 @@ const createNewDashboard = () => {
          <Text style={styles.buttonText}>New Dashboard</Text>
       </TouchableOpacity>
 
-      <Text style={styles.sectionTitle}>Select Dataset</Text>
+     <View style={styles.leftSidebar}>
 
-<View style={styles.savedList}>
-  {datasets.map((dataset) => (
-    <TouchableOpacity
-      key={dataset._id}
-      style={[
-        styles.savedItem,
-        selectedDataset?._id === dataset._id && { borderColor: "#2563eb" },
-      ]}
-      onPress={() => setSelectedDataset(dataset)}
-    >
-      <Text style={styles.savedText}>{dataset.name}</Text>
-    </TouchableOpacity>
-  ))}
+  <Text style={styles.sidebarTitle}>
+    Datasets
+  </Text>
+
+  <View style={styles.savedList}>
+    {datasets.map((dataset) => (
+      <TouchableOpacity
+        key={dataset._id}
+        style={[
+          styles.savedItem,
+          selectedDataset?._id === dataset._id && {
+            borderColor: "#2563eb",
+          },
+        ]}
+        onPress={() => setSelectedDataset(dataset)}
+      >
+        <Text style={styles.savedText}>
+          {dataset.name}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+
 </View>
 
-      <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.button} onPress={addKpi}>
-          <Text style={styles.buttonText}>Add KPI</Text>
-        </TouchableOpacity>
+      
 
 
         <TouchableOpacity style={styles.button} onPress={addChart}>
@@ -486,6 +516,13 @@ const createNewDashboard = () => {
           <Text style={styles.buttonText}>Save Layout</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.centerCanvas}>
+
+        <View style={styles.toolbar}>
+        <TouchableOpacity style={styles.button} onPress={addKpi}>
+          <Text style={styles.buttonText}>Add KPI</Text>
+        </TouchableOpacity>
 
       <View style={styles.canvas}>
         
@@ -717,7 +754,9 @@ const createNewDashboard = () => {
       </>
     )}
     </View>
+  
   </>
+  
 )}
 
       {/* Resize Handle */}
@@ -734,6 +773,67 @@ const createNewDashboard = () => {
     </View>
   ))}
       </View>
+      </View>
+
+      <View style={styles.rightSidebar}>
+
+  <Text style={styles.sidebarTitle}>
+    Visualizations
+  </Text>
+
+  <View style={styles.visualGrid}>
+
+    <TouchableOpacity
+      style={styles.visualButton}
+      onPress={() => addSpecificChart("bar")}
+    >
+      <Text style={styles.visualIcon}>📊</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.visualButton}
+      onPress={() => addSpecificChart("line")}
+    >
+      <Text style={styles.visualIcon}>📈</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.visualButton}
+      onPress={() => addSpecificChart("pie")}
+    >
+      <Text style={styles.visualIcon}>🍩</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.visualButton}
+      onPress={() => addSpecificChart("map")}
+    >
+      <Text style={styles.visualIcon}>🗺️</Text>
+    </TouchableOpacity>
+
+  </View>
+
+  <Text style={styles.sidebarTitle}>
+    Fields
+  </Text>
+
+  <ScrollView>
+
+    {selectedDataset?.columns?.map((col: any) => (
+      <TouchableOpacity
+        key={col.name}
+        style={styles.fieldItem}
+      >
+        <Text style={styles.fieldText}>
+          {col.name}
+        </Text>
+      </TouchableOpacity>
+    ))}
+
+  </ScrollView>
+
+</View>
+ </View>
     </ScrollView>
   );
 }
@@ -742,7 +842,6 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: "#0a0a0a",
-    padding: 16,
   },
   header: {
     marginBottom: 16,
@@ -885,6 +984,7 @@ resizeHandle: {
 canvas: {
   position: "relative",
   minHeight: 800,
+  width: 1600,
   backgroundColor: "#111827",
   borderWidth: 1,
   borderColor: "#333",
@@ -971,6 +1071,72 @@ chartArea: {
   flex: 1,
   marginTop: 10,
   justifyContent: "center",
+},
+
+appContainer: {
+  flexDirection: "row",
+  flex: 1,
+},
+
+leftSidebar: {
+  width: 260,
+  height: "100%",
+  backgroundColor: "#0f172a",
+  borderRightWidth: 1,
+  borderColor: "#1e293b",
+  padding: 12,
+},
+
+centerCanvas: {
+  flex: 1,
+  padding: 12,
+},
+
+rightSidebar: {
+  width: 320,
+  height: "100%",
+  backgroundColor: "#0f172a",
+  borderLeftWidth: 1,
+  borderColor: "#1e293b",
+  padding: 12,
+},
+
+sidebarTitle: {
+  color: "#fff",
+  fontSize: 18,
+  fontWeight: "bold",
+  marginBottom: 14,
+},
+
+visualGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 10,
+  marginBottom: 20,
+},
+
+visualButton: {
+  width: 60,
+  height: 60,
+  backgroundColor: "#1e293b",
+  justifyContent: "center",
+  alignItems: "center",
+  borderRadius: 10,
+},
+
+visualIcon: {
+  fontSize: 28,
+},
+
+fieldItem: {
+  backgroundColor: "#1e293b",
+  padding: 10,
+  borderRadius: 8,
+  marginBottom: 8,
+},
+
+fieldText: {
+  color: "#fff",
 },
 
 });
