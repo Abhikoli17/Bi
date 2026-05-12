@@ -483,10 +483,7 @@ const deleteDashboard = async (dashboardId: string) => {
         </View>
 
         {/* SCROLLABLE CANVAS */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator
-        >
+        
           <ScrollView showsVerticalScrollIndicator>
 
             <View style={styles.canvas}>
@@ -607,7 +604,7 @@ const deleteDashboard = async (dashboardId: string) => {
             </View>
 
           </ScrollView>
-        </ScrollView>
+       
 
       </View>
 
@@ -684,7 +681,8 @@ const styles = StyleSheet.create({
 
   canvas: {
     position: "relative",
-    width: 1800,
+    flex: 1,
+    minWidth: 1000,
     minHeight: 1200,
     backgroundColor: "#111827",
     borderRadius: 12,
