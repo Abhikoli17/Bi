@@ -255,7 +255,15 @@ export default function DashboardBuilder() {
       )
     );
 
-    const col = numericCols[index % numericCols.length];
+    if (numericCols.length === 0) {
+  return {
+    title: "Rows",
+    value: String(selectedDataset.data.length),
+    growth: "Live",
+  };
+}
+
+const col = numericCols[index % numericCols.length];
 
     const total = selectedDataset.data.reduce(
       (sum: number, row: any) => {
@@ -332,95 +340,158 @@ export default function DashboardBuilder() {
     Alert.alert("Dashboard Saved");
   };
 
+  const addChart = () => {
+  addSpecificChart("bar");
+};
+
+const openDashboard = (dashboard: any) => {
+  setDashboardName(dashboard.name);
+
+  setWidgets(dashboard.layout || dashboard.widgets || []);
+
+  setCurrentDashboardId(dashboard._id);
+};
+
+const deleteDashboard = async (dashboardId: string) => {
+  if (!token) return;
+
+  await apiCall(
+    `/api/dashboard-layouts/${dashboardId}`,
+    {
+      method: "DELETE",
+    },
+    token
+  );
+
+  setSavedDashboards((prev) =>
+    prev.filter((d) => d._id !== dashboardId)
+  );
+
+  if (currentDashboardId === dashboardId) {
+    setCurrentDashboardId(null);
+  }
+};
+
   return (
-    <View style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Dashboard Builder</Text>
+  <View style={styles.page}>
+    
+    {/* HEADER */}
+    <View style={styles.header}>
+      <Text style={styles.title}>Dashboard Builder</Text>
+      <Text style={styles.subtitle}>
+        Drag, resize, and arrange visuals like Power BI
+      </Text>
+    </View>
 
-        <Text style={styles.subtitle}>
-          Drag, resize, and arrange visuals like Power BI
+    {/* MAIN LAYOUT */}
+    <View style={styles.mainLayout}>
+
+      {/* LEFT SIDEBAR */}
+      <View style={styles.leftSidebar}>
+
+        <Text style={styles.sidebarTitle}>Datasets</Text>
+
+        <TextInput
+          value={dashboardName}
+          onChangeText={setDashboardName}
+          placeholder="Dashboard name"
+          placeholderTextColor="#777"
+          style={styles.nameInput}
+        />
+
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={saveDashboard}
+        >
+          <Text style={styles.buttonText}>Save Dashboard</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>
+          Saved Dashboards
         </Text>
-      </View>
 
-      <View style={styles.mainLayout}>
-        {/* LEFT SIDEBAR */}
-
-        <View style={styles.leftSidebar}>
-          <Text style={styles.sidebarTitle}>Datasets</Text>
-
-          <TextInput
-            value={dashboardName}
-            onChangeText={setDashboardName}
-            placeholder="Dashboard name"
-            placeholderTextColor="#777"
-            style={styles.nameInput}
-          />
-
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={saveDashboard}
-          >
-            <Text style={styles.buttonText}>
-              Save Dashboard
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.sectionTitle}>
-            Saved Dashboards
-          </Text>
-
-          <View style={styles.savedList}>
-            {savedDashboards.map((dash) => (
+        <ScrollView style={{ maxHeight: 180 }}>
+          {savedDashboards.map((dash) => (
+            <View key={dash._id} style={styles.savedItem}>
               <TouchableOpacity
-                key={dash._id}
-                style={styles.savedItem}
+                onPress={() => openDashboard(dash)}
               >
                 <Text style={styles.savedText}>
                   {dash.name}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
 
+              <TouchableOpacity
+                onPress={() => deleteDashboard(dash._id)}
+              >
+                <Text style={styles.deleteText}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={addKpi}
+        >
+          <Text style={styles.buttonText}>Add KPI</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => addSpecificChart("bar")}
+        >
+          <Text style={styles.buttonText}>Bar Chart</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => addSpecificChart("line")}
+        >
+          <Text style={styles.buttonText}>Line Chart</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => addSpecificChart("pie")}
+        >
+          <Text style={styles.buttonText}>Pie Chart</Text>
+        </TouchableOpacity>
+
+      </View>
+
+      {/* CENTER */}
+      <View style={styles.centerCanvas}>
+
+        {/* TOOLBAR */}
+        <View style={styles.toolbar}>
           <TouchableOpacity
             style={styles.button}
-            onPress={addKpi}
+            onPress={addChart}
           >
-            <Text style={styles.buttonText}>Add KPI</Text>
+            <Text style={styles.buttonText}>Add Chart</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.button}
-            onPress={() => addSpecificChart("bar")}
+            style={styles.saveButton}
+            onPress={saveDashboard}
           >
-            <Text style={styles.buttonText}>Bar Chart</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => addSpecificChart("line")}
-          >
-            <Text style={styles.buttonText}>Line Chart</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => addSpecificChart("pie")}
-          >
-            <Text style={styles.buttonText}>Pie Chart</Text>
+            <Text style={styles.buttonText}>Save Layout</Text>
           </TouchableOpacity>
         </View>
 
-        {/* CENTER CANVAS */}
+        {/* SCROLLABLE CANVAS */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator
+        >
+          <ScrollView showsVerticalScrollIndicator>
 
-        <View style={styles.centerCanvas}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator
-            showsVerticalScrollIndicator
-          >
             <View style={styles.canvas}>
-              {widgets.map((widget, index) => (
+
+              {widgets.map((widget) => (
                 <View
                   key={widget.id}
                   style={[
@@ -432,95 +503,35 @@ export default function DashboardBuilder() {
                       height: widget.h,
                     },
                   ]}
-                  onStartShouldSetResponder={() => true}
-                  onResponderGrant={(e: any) => {
-                    setDraggingId(widget.id);
-
-                    setStartPos({
-                      x: e.nativeEvent.pageX,
-                      y: e.nativeEvent.pageY,
-                    });
-                  }}
-                  onResponderMove={(e: any) => {
-                    const dx =
-                      e.nativeEvent.pageX - startPos.x;
-
-                    const dy =
-                      e.nativeEvent.pageY - startPos.y;
-
-                    if (resizingId === widget.id) {
-                      setWidgets((prev) =>
-                        prev.map((w) =>
-                          w.id === widget.id
-                            ? {
-                                ...w,
-                                w: Math.max(
-                                  220,
-                                  w.w + dx
-                                ),
-                                h: Math.max(
-                                  160,
-                                  w.h + dy
-                                ),
-                              }
-                            : w
-                        )
-                      );
-                    } else if (
-                      draggingId === widget.id
-                    ) {
-                      setWidgets((prev) =>
-                        prev.map((w) =>
-                          w.id === widget.id
-                            ? {
-                                ...w,
-                                x:
-                                  Math.round(
-                                    (w.x + dx) /
-                                      GRID_SIZE
-                                  ) * GRID_SIZE,
-                                y:
-                                  Math.round(
-                                    (w.y + dy) /
-                                      GRID_SIZE
-                                  ) * GRID_SIZE,
-                              }
-                            : w
-                        )
-                      );
-                    }
-
-                    setStartPos({
-                      x: e.nativeEvent.pageX,
-                      y: e.nativeEvent.pageY,
-                    });
-                  }}
-                  onResponderRelease={() => {
-                    setDraggingId(null);
-                    setResizingId(null);
-                  }}
                 >
+
+                  {/* KPI */}
                   {widget.type === "kpi" ? (
                     <>
                       <Text style={styles.widgetTitle}>
-                        {getKpiData(index).title}
+                        KPI Card
                       </Text>
 
                       <Text style={styles.kpiValue}>
-                        {getKpiData(index).value}
+                        1,503
                       </Text>
 
                       <Text style={styles.growth}>
-                        {getKpiData(index).growth}
+                        Live
                       </Text>
                     </>
                   ) : (
                     <>
-                      <View style={styles.chartArea}>
+                      <Text style={styles.widgetTitle}>
+                        {widget.type.toUpperCase()} CHART
+                      </Text>
+
+                      <View style={{ flex: 1 }}>
+
                         {widget.type === "bar" && (
                           <ResponsiveContainer
                             width="100%"
-                            height={300}
+                            height="100%"
                           >
                             <BarChart
                               data={getChartData(widget)}
@@ -528,7 +539,6 @@ export default function DashboardBuilder() {
                               <XAxis dataKey="name" />
                               <YAxis />
                               <Tooltip />
-
                               <Bar
                                 dataKey="value"
                                 fill="#3b82f6"
@@ -540,7 +550,7 @@ export default function DashboardBuilder() {
                         {widget.type === "line" && (
                           <ResponsiveContainer
                             width="100%"
-                            height={300}
+                            height="100%"
                           >
                             <LineChart
                               data={getChartData(widget)}
@@ -548,7 +558,6 @@ export default function DashboardBuilder() {
                               <XAxis dataKey="name" />
                               <YAxis />
                               <Tooltip />
-
                               <Line
                                 type="monotone"
                                 dataKey="value"
@@ -561,85 +570,78 @@ export default function DashboardBuilder() {
                         {widget.type === "pie" && (
                           <ResponsiveContainer
                             width="100%"
-                            height={300}
+                            height="100%"
                           >
                             <PieChart>
                               <Pie
                                 data={getChartData(widget)}
                                 dataKey="value"
-                                nameKey="name"
                                 outerRadius={100}
                               >
                                 {getChartData(widget).map(
-                                  (_: any, i: number) => (
+                                  (_, index) => (
                                     <Cell
-                                      key={i}
-                                      fill={[
-                                        "#3b82f6",
-                                        "#22c55e",
-                                        "#f59e0b",
-                                        "#ef4444",
-                                      ][i % 4]}
+                                      key={index}
+                                      fill={
+                                        [
+                                          "#3b82f6",
+                                          "#22c55e",
+                                          "#f59e0b",
+                                          "#ef4444",
+                                        ][index % 4]
+                                      }
                                     />
                                   )
                                 )}
                               </Pie>
-
-                              <Tooltip />
                             </PieChart>
                           </ResponsiveContainer>
                         )}
+
                       </View>
                     </>
                   )}
-
-                  <TouchableOpacity
-                    style={styles.resizeHandle}
-                    onPressIn={(e: any) => {
-                      setResizingId(widget.id);
-
-                      setStartPos({
-                        x: e.nativeEvent.pageX,
-                        y: e.nativeEvent.pageY,
-                      });
-                    }}
-                  />
                 </View>
               ))}
+
             </View>
+
           </ScrollView>
-        </View>
+        </ScrollView>
 
-        {/* RIGHT SIDEBAR */}
-
-        <View style={styles.rightSidebar}>
-          <Text style={styles.sidebarTitle}>
-            Fields
-          </Text>
-
-          <ScrollView>
-            {selectedDataset?.columns?.map((col: any) => (
-              <View
-                key={col.name}
-                style={styles.fieldItem}
-              >
-                <Text style={styles.fieldText}>
-                  {col.name}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
       </View>
+
+      {/* RIGHT SIDEBAR */}
+      <View style={styles.rightSidebar}>
+
+        <Text style={styles.sidebarTitle}>
+          Fields
+        </Text>
+
+        <ScrollView>
+          {selectedDataset?.columns?.map((col: any) => (
+            <View
+              key={col.name}
+              style={styles.fieldItem}
+            >
+              <Text style={styles.fieldText}>
+                {col.name}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+
+      </View>
+
     </View>
-  );
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: "#0a0a0a",
-    height: "100vh" as any,
   },
 
   header: {
@@ -663,7 +665,7 @@ const styles = StyleSheet.create({
   },
 
   leftSidebar: {
-    width: 260,
+    width: 240,
     backgroundColor: "#0f172a",
     padding: 12,
   },
@@ -675,7 +677,7 @@ const styles = StyleSheet.create({
   },
 
   rightSidebar: {
-    width: 260,
+    width: 240,
     backgroundColor: "#0f172a",
     padding: 12,
   },
@@ -701,19 +703,20 @@ const styles = StyleSheet.create({
 
   widgetTitle: {
     color: "#fff",
+    fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
   kpiValue: {
     color: "#fff",
-    fontSize: 34,
+    fontSize: 42,
     fontWeight: "bold",
   },
 
   growth: {
     color: "#22c55e",
-    marginTop: 10,
+    marginTop: 8,
     fontWeight: "bold",
   },
 
@@ -735,7 +738,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: "#1f2937",
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 10,
   },
@@ -743,21 +746,21 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: "#2563eb",
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 10,
   },
 
   buttonText: {
     color: "#fff",
-    fontWeight: "bold",
+    fontWeight: "700",
   },
 
   sidebarTitle: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 14,
+    marginBottom: 16,
   },
 
   sectionTitle: {
@@ -794,7 +797,7 @@ const styles = StyleSheet.create({
 
   fieldItem: {
     backgroundColor: "#1e293b",
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 8,
   },
@@ -802,4 +805,16 @@ const styles = StyleSheet.create({
   fieldText: {
     color: "#fff",
   },
+
+  toolbar: {
+  flexDirection: "row",
+  gap: 12,
+  marginBottom: 12,
+},
+
+deleteText: {
+  color: "#ef4444",
+  fontWeight: "bold",
+},
+
 });
