@@ -680,10 +680,13 @@ const styles = StyleSheet.create({
   },
 
   canvas: {
-    position: "relative",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    padding: 12,
+    gap: 16,
     flex: 1,
     minWidth: 1000,
-    minHeight: 1200,
     backgroundColor: "#111827",
     borderRadius: 12,
     borderWidth: 1,
@@ -691,12 +694,12 @@ const styles = StyleSheet.create({
   },
 
   widget: {
-    position: "absolute",
     backgroundColor: "#0f172a",
     borderWidth: 1,
     borderColor: "#334155",
     borderRadius: 12,
-    padding: 12,
+    padding: 16,
+    marginBottom: 16,
   },
 
   widgetTitle: {
