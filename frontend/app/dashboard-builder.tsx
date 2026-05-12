@@ -440,11 +440,20 @@ const createNewDashboard = () => {
 
   return (
     <ScrollView style={styles.page}>
-      <View style={styles.mainLayout}>
+      
         <View style={styles.header}>
         <Text style={styles.title}>Dashboard Builder</Text>
         <Text style={styles.subtitle}>Drag, resize, and arrange visuals like Power BI</Text>
         </View>
+
+        <View style={styles.mainLayout}>
+
+          <View style={styles.leftSidebar}>
+
+            <Text style={styles.sidebarTitle}>
+                Datasets
+            </Text>
+
 
       <TextInput
         value={dashboardName}
@@ -478,12 +487,7 @@ const createNewDashboard = () => {
          <Text style={styles.buttonText}>New Dashboard</Text>
       </TouchableOpacity>
 
-     <View style={styles.leftSidebar}>
-
-  <Text style={styles.sidebarTitle}>
-    Datasets
-  </Text>
-
+     
   <View style={styles.savedList}>
     {datasets.map((dataset) => (
       <TouchableOpacity
@@ -839,6 +843,7 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: "#0a0a0a",
+    height: "100vh" as any,
   },
   header: {
     marginBottom: 16,
@@ -988,7 +993,6 @@ canvas: {
   borderColor: "#333",
   borderRadius: 12,
   overflow: "hidden",
-  padding: 20,
 },
 
 mapBox: {
@@ -1074,6 +1078,7 @@ chartArea: {
 mainLayout: {
   flex: 1,
   flexDirection: "row",
+  overflow: "hidden",
 },
 
 leftSidebar: {
@@ -1086,6 +1091,7 @@ leftSidebar: {
 centerCanvas: {
   flex: 1,
   padding: 12,
+  overflow: "hidden",
 },
 
 rightSidebar: {
@@ -1141,7 +1147,7 @@ topBar: {
   paddingHorizontal: 16,
   flexDirection: "row",
   alignItems: "center",
-  justifyContent: "space-between",
+  justifyContent: "center",
 }
 
 });
