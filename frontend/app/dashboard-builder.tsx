@@ -439,7 +439,7 @@ const createNewDashboard = () => {
 }, [token]);
 
   return (
-    <ScrollView style={styles.page}>
+    <View style={styles.page}>
       
         <View style={styles.header}>
         <Text style={styles.title}>Dashboard Builder</Text>
@@ -835,7 +835,7 @@ const createNewDashboard = () => {
 
 </View>
  </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -843,7 +843,6 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: "#0a0a0a",
-    height: "100vh" as any,
   },
   header: {
     marginBottom: 16,
@@ -987,12 +986,10 @@ canvas: {
   position: "relative",
   minHeight: 800,
   minWidth: 1600,
-  flex : 1,
   backgroundColor: "#111827",
   borderWidth: 1,
   borderColor: "#333",
   borderRadius: 12,
-  overflow: "hidden",
 },
 
 mapBox: {
@@ -1078,7 +1075,7 @@ chartArea: {
 mainLayout: {
   flex: 1,
   flexDirection: "row",
-  overflow: "hidden",
+  height: "100%",
 },
 
 leftSidebar: {
