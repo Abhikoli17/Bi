@@ -122,6 +122,10 @@ export default function DashboardBuilder() {
         )
       )?.name;
 
+      if (!metric) {
+         return sampleData;
+      }
+
     const aggregation =
       widget.config?.aggregation || "SUM";
 
@@ -479,6 +483,22 @@ export default function DashboardBuilder() {
             </TouchableOpacity>
           </View>
 
+          <View
+             style={{
+               flexDirection: "row",
+               gap: 16,
+               marginBottom: 20,
+            }}
+          >
+              <Text style={{ color: "#fff" }}>
+                Widgets: {widgets.length}
+              </Text>
+
+              <Text style={{ color: "#22c55e" }}>
+                 Dataset: {selectedDataset?.name || "None"}
+              </Text>
+          </View>
+
           {/* SCROLLABLE CANVAS */}
           <ScrollView
             showsVerticalScrollIndicator
@@ -550,9 +570,25 @@ export default function DashboardBuilder() {
                           styles.widgetTitle
                         }
                       >
-                        {widget.type.toUpperCase()}{" "}
-                        CHART
+                        {widget.config?.metric || "Sales"} by{" "}
+                        {widget.config?.xAxis || "Category"}
                       </Text>
+
+                      <View
+                         style={{
+                           flexDirection: "row",
+                           gap: 10,
+                           marginBottom: 12,
+                        }}
+                      >
+                       <Text style={{ color: "#fff" }}>
+                         X: {widget.config?.xAxis || "Auto"}
+                       </Text>
+
+                       <Text style={{ color: "#fff" }}>
+                          Metric: {widget.config?.metric || "Auto"}
+                       </Text>
+                    </View>
 
                       <View
                         style={{ flex: 1,
@@ -574,9 +610,30 @@ export default function DashboardBuilder() {
                               <YAxis />
                               <Tooltip />
 
+                              <defs>
+                                 <linearGradient
+                                    id="colorUv"
+                                    x1="0"
+                                    y1="0"
+                                    x2="0"
+                                    y2="1"
+                                 >
+                                  <stop
+                                    offset="5%"
+                                    stopColor="#3b82f6"
+                                    stopOpacity={0.9}
+                                  />
+                                  <stop
+                                    offset="95%"
+                                    stopColor="#1d4ed8"
+                                    stopOpacity={0.6}
+                                  />
+                                 </linearGradient>
+                               </defs>
+
                               <Bar
                                 dataKey="value"
-                                fill="#3b82f6"
+                                fill="url(#colorUv)"
                               />
                             </BarChart>
                           </ResponsiveContainer>
@@ -612,13 +669,13 @@ export default function DashboardBuilder() {
                             width="100%"
                             height="100%"
                           >
-                            <PieChart>
+                            <PieChart margin={{top: 20}}>
                               <Pie
                                 data={getChartData(
                                   widget
                                 )}
                                 dataKey="value"
-                                outerRadius={100}
+                                outerRadius={140}
                               >
                                 {getChartData(
                                   widget
@@ -663,7 +720,7 @@ export default function DashboardBuilder() {
           <ScrollView>
             {selectedDataset?.columns?.map(
               (col: any) => (
-                <View
+                <TouchableOpacity
                   key={col.name}
                   style={styles.fieldItem}
                 >
@@ -672,7 +729,7 @@ export default function DashboardBuilder() {
                   >
                     {col.name}
                   </Text>
-                </View>
+                </TouchableOpacity>
               )
             )}
           </ScrollView>
@@ -684,7 +741,7 @@ export default function DashboardBuilder() {
 
 const styles = StyleSheet.create({
   page: {
-    flex: 1,
+    minHeight: "100%",
     backgroundColor: "#0a0a0a",
   },
 
@@ -762,10 +819,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 8,
+    cursor: "pointer",
+    //transitionDuration: "0.2s",
   },
 
   kpiWidget: {
-    width: 280,
+    flexBasis: "23%",
+    minWidth: 220,
     height: 140,
     justifyContent: "center",
   },
