@@ -27,31 +27,31 @@ import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
 
 export default function DashboardBuilder() {
-  const GRID_SIZE = 20;
+  //const GRID_SIZE = 20;
 
   const [widgets, setWidgets] = useState<any[]>([
     {
       id: "kpi1",
-      x: 20,
-      y: 20,
-      w: 220,
-      h: 130,
+      //x: 20,
+      //y: 20,
+      //w: 220,
+      //h: 130,
       type: "kpi",
     },
     {
       id: "kpi2",
-      x: 260,
-      y: 20,
-      w: 220,
-      h: 130,
+      //x: 260,
+      //y: 20,
+      //w: 220,
+      //h: 130,
       type: "kpi",
     },
     {
       id: "bar1",
-      x: 20,
-      y: 180,
-      w: 700,
-      h: 420,
+      //x: 20,
+      //y: 180,
+      //w: 700,
+      //h: 420,
       type: "bar",
       config: {
         xAxis: "",
@@ -94,7 +94,7 @@ export default function DashboardBuilder() {
     }
   }, [token]);
 
-  const getNextPosition = () => {
+  /*const getNextPosition = () => {
     const padding = 20;
 
     if (widgets.length === 0) {
@@ -112,35 +112,35 @@ export default function DashboardBuilder() {
     }
 
     return { x: nextX, y: nextY };
-  };
+  };*/
 
   const addKpi = () => {
-    const pos = getNextPosition();
+    //const pos = getNextPosition();
 
     setWidgets((prev) => [
       ...prev,
       {
         id: `kpi-${Date.now()}`,
-        x: pos.x,
-        y: pos.y,
-        w: 240,
-        h: 140,
+        //x: pos.x,
+        //y: pos.y,
+        //w: 240,
+        //h: 140,
         type: "kpi",
       },
     ]);
   };
 
   const addSpecificChart = (type: string) => {
-    const pos = getNextPosition();
+    //const pos = getNextPosition();
 
     setWidgets((prev) => [
       ...prev,
       {
         id: `${type}-${Date.now()}`,
-        x: pos.x,
-        y: pos.y,
-        w: 700,
-        h: 420,
+        //x: pos.x,
+        //y: pos.y,
+        //w: 700,
+        //h: 420,
         type,
         config: {
           xAxis: "",
@@ -310,6 +310,8 @@ const col = numericCols[index % numericCols.length];
       name: dashboardName,
       layout: widgets,
       widgets,
+      //layout: widgets.map(({ x, y, w, h, ...rest }) => rest),
+      //widgets: widgets.map(({ x, y, w, h, ...rest }) => rest),
     };
 
     if (currentDashboardId) {
@@ -348,6 +350,12 @@ const openDashboard = (dashboard: any) => {
   setDashboardName(dashboard.name);
 
   setWidgets(dashboard.layout || dashboard.widgets || []);
+
+  //const cleanedWidgets = (dashboard.layout || dashboard.widgets || []).map(
+  //({ x, y, w, h, ...rest }: any) => rest
+//);
+
+//setWidgets(cleanedWidgets);
 
   setCurrentDashboardId(dashboard._id);
 };
@@ -493,12 +501,10 @@ const deleteDashboard = async (dashboardId: string) => {
                   key={widget.id}
                   style={[
                     styles.widget,
-                    {
-                      left: widget.x,
-                      top: widget.y,
-                      width: widget.w,
-                      height: widget.h,
-                    },
+                    
+                    widget.type === "kpi"
+                       ? styles.kpiWidget
+                       : styles.chartWidget,
                   ]}
                 >
 
@@ -682,6 +688,7 @@ const styles = StyleSheet.create({
   canvas: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
     alignItems: "flex-start",
     padding: 12,
     gap: 16,
@@ -701,6 +708,16 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
+
+  kpiWidget: {
+  width: 240,
+  height: 140,
+},
+
+chartWidget: {
+  width: "48%",
+  height: 420,
+},
 
   widgetTitle: {
     color: "#fff",
