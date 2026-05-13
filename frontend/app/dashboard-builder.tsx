@@ -27,31 +27,19 @@ import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
 
 export default function DashboardBuilder() {
-  //const GRID_SIZE = 20;
+  const { token } = useAuthStore();
 
   const [widgets, setWidgets] = useState<any[]>([
     {
       id: "kpi1",
-      //x: 20,
-      //y: 20,
-      //w: 220,
-      //h: 130,
       type: "kpi",
     },
     {
       id: "kpi2",
-      //x: 260,
-      //y: 20,
-      //w: 220,
-      //h: 130,
       type: "kpi",
     },
     {
       id: "bar1",
-      //x: 20,
-      //y: 180,
-      //w: 700,
-      //h: 420,
       type: "bar",
       config: {
         xAxis: "",
@@ -61,23 +49,19 @@ export default function DashboardBuilder() {
     },
   ]);
 
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [resizingId, setResizingId] = useState<string | null>(null);
+  const [savedDashboards, setSavedDashboards] =
+    useState<any[]>([]);
 
-  const [startPos, setStartPos] = useState({
-    x: 0,
-    y: 0,
-  });
+  const [dashboardName, setDashboardName] =
+    useState("My Dashboard");
 
-  const { token } = useAuthStore();
-
-  const [savedDashboards, setSavedDashboards] = useState<any[]>([]);
-  const [dashboardName, setDashboardName] = useState("My Dashboard");
   const [currentDashboardId, setCurrentDashboardId] =
     useState<string | null>(null);
 
   const [datasets, setDatasets] = useState<any[]>([]);
-  const [selectedDataset, setSelectedDataset] = useState<any>(null);
+
+  const [selectedDataset, setSelectedDataset] =
+    useState<any>(null);
 
   const sampleData = [
     { name: "Jan", value: 400 },
@@ -94,53 +78,21 @@ export default function DashboardBuilder() {
     }
   }, [token]);
 
-  /*const getNextPosition = () => {
-    const padding = 20;
-
-    if (widgets.length === 0) {
-      return { x: padding, y: padding };
-    }
-
-    const last = widgets[widgets.length - 1];
-
-    let nextX = last.x + last.w + padding;
-    let nextY = last.y;
-
-    if (nextX + 400 > 1600) {
-      nextX = padding;
-      nextY = last.y + last.h + padding;
-    }
-
-    return { x: nextX, y: nextY };
-  };*/
-
   const addKpi = () => {
-    //const pos = getNextPosition();
-
     setWidgets((prev) => [
       ...prev,
       {
         id: `kpi-${Date.now()}`,
-        //x: pos.x,
-        //y: pos.y,
-        //w: 240,
-        //h: 140,
         type: "kpi",
       },
     ]);
   };
 
   const addSpecificChart = (type: string) => {
-    //const pos = getNextPosition();
-
     setWidgets((prev) => [
       ...prev,
       {
         id: `${type}-${Date.now()}`,
-        //x: pos.x,
-        //y: pos.y,
-        //w: 700,
-        //h: 420,
         type,
         config: {
           xAxis: "",
@@ -151,33 +103,14 @@ export default function DashboardBuilder() {
     ]);
   };
 
-  const updateWidgetConfig = (
-    widgetId: string,
-    field: string,
-    value: string
-  ) => {
-    setWidgets((prev) =>
-      prev.map((widget) =>
-        widget.id === widgetId
-          ? {
-              ...widget,
-              config: {
-                ...widget.config,
-                [field]: value,
-              },
-            }
-          : widget
-      )
-    );
-  };
-
   const getChartData = (widget: any) => {
     if (!selectedDataset?.columns || !selectedDataset?.data) {
       return sampleData;
     }
 
     const xAxis =
-      widget.config?.xAxis || selectedDataset.columns[0]?.name;
+      widget.config?.xAxis ||
+      selectedDataset.columns[0]?.name;
 
     const metric =
       widget.config?.metric ||
@@ -202,6 +135,7 @@ export default function DashboardBuilder() {
       }
 
       const num = parseFloat(row[metric]);
+
       grouped[key].push(isNaN(num) ? 0 : num);
     });
 
@@ -247,27 +181,30 @@ export default function DashboardBuilder() {
       };
     }
 
-    const numericCols = selectedDataset.columns.filter((col: any) =>
-      selectedDataset.data.some(
-        (row: any) =>
-          row[col.name] !== "" &&
-          !isNaN(Number(row[col.name]))
-      )
-    );
+    const numericCols =
+      selectedDataset.columns.filter((col: any) =>
+        selectedDataset.data.some(
+          (row: any) =>
+            row[col.name] !== "" &&
+            !isNaN(Number(row[col.name]))
+        )
+      );
 
     if (numericCols.length === 0) {
-  return {
-    title: "Rows",
-    value: String(selectedDataset.data.length),
-    growth: "Live",
-  };
-}
+      return {
+        title: "Rows",
+        value: String(selectedDataset.data.length),
+        growth: "Live",
+      };
+    }
 
-const col = numericCols[index % numericCols.length];
+    const col =
+      numericCols[index % numericCols.length];
 
     const total = selectedDataset.data.reduce(
       (sum: number, row: any) => {
         const val = parseFloat(row[col.name]);
+
         return sum + (isNaN(val) ? 0 : val);
       },
       0
@@ -283,7 +220,11 @@ const col = numericCols[index % numericCols.length];
   const loadDatasets = async () => {
     if (!token) return;
 
-    const data = await apiCall("/api/datasets", {}, token);
+    const data = await apiCall(
+      "/api/datasets",
+      {},
+      token
+    );
 
     setDatasets(data);
 
@@ -295,7 +236,11 @@ const col = numericCols[index % numericCols.length];
   const loadSavedDashboards = async () => {
     if (!token) return;
 
-    const data = await apiCall("/api/dashboard-layouts", {}, token);
+    const data = await apiCall(
+      "/api/dashboard-layouts",
+      {},
+      token
+    );
 
     setSavedDashboards(data);
   };
@@ -310,8 +255,6 @@ const col = numericCols[index % numericCols.length];
       name: dashboardName,
       layout: widgets,
       widgets,
-      //layout: widgets.map(({ x, y, w, h, ...rest }) => rest),
-      //widgets: widgets.map(({ x, y, w, h, ...rest }) => rest),
     };
 
     if (currentDashboardId) {
@@ -342,206 +285,268 @@ const col = numericCols[index % numericCols.length];
     Alert.alert("Dashboard Saved");
   };
 
-  const addChart = () => {
-  addSpecificChart("bar");
-};
+  const openDashboard = (dashboard: any) => {
+    setDashboardName(dashboard.name);
 
-const openDashboard = (dashboard: any) => {
-  setDashboardName(dashboard.name);
+    setWidgets(
+      dashboard.layout ||
+        dashboard.widgets ||
+        []
+    );
 
-  setWidgets(dashboard.layout || dashboard.widgets || []);
+    setCurrentDashboardId(dashboard._id);
+  };
 
-  //const cleanedWidgets = (dashboard.layout || dashboard.widgets || []).map(
-  //({ x, y, w, h, ...rest }: any) => rest
-//);
+  const deleteDashboard = async (
+    dashboardId: string
+  ) => {
+    if (!token) return;
 
-//setWidgets(cleanedWidgets);
+    await apiCall(
+      `/api/dashboard-layouts/${dashboardId}`,
+      {
+        method: "DELETE",
+      },
+      token
+    );
 
-  setCurrentDashboardId(dashboard._id);
-};
+    setSavedDashboards((prev) =>
+      prev.filter((d) => d._id !== dashboardId)
+    );
 
-const deleteDashboard = async (dashboardId: string) => {
-  if (!token) return;
-
-  await apiCall(
-    `/api/dashboard-layouts/${dashboardId}`,
-    {
-      method: "DELETE",
-    },
-    token
-  );
-
-  setSavedDashboards((prev) =>
-    prev.filter((d) => d._id !== dashboardId)
-  );
-
-  if (currentDashboardId === dashboardId) {
-    setCurrentDashboardId(null);
-  }
-};
+    if (currentDashboardId === dashboardId) {
+      setCurrentDashboardId(null);
+    }
+  };
 
   return (
-  <View style={styles.page}>
-    
-    {/* HEADER */}
-    <View style={styles.header}>
-      <Text style={styles.title}>Dashboard Builder</Text>
-      <Text style={styles.subtitle}>
-        Drag, resize, and arrange visuals like Power BI
-      </Text>
-    </View>
-
-    {/* MAIN LAYOUT */}
-    <View style={styles.mainLayout}>
-
-      {/* LEFT SIDEBAR */}
-      <View style={styles.leftSidebar}>
-
-        <Text style={styles.sidebarTitle}>Datasets</Text>
-
-        <TextInput
-          value={dashboardName}
-          onChangeText={setDashboardName}
-          placeholder="Dashboard name"
-          placeholderTextColor="#777"
-          style={styles.nameInput}
-        />
-
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={saveDashboard}
-        >
-          <Text style={styles.buttonText}>Save Dashboard</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.sectionTitle}>
-          Saved Dashboards
+    <View style={styles.page}>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          Dashboard Builder
         </Text>
 
-        <ScrollView style={{ maxHeight: 180 }}>
-          {savedDashboards.map((dash) => (
-            <View key={dash._id} style={styles.savedItem}>
-              <TouchableOpacity
-                onPress={() => openDashboard(dash)}
-              >
-                <Text style={styles.savedText}>
-                  {dash.name}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => deleteDashboard(dash._id)}
-              >
-                <Text style={styles.deleteText}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={addKpi}
-        >
-          <Text style={styles.buttonText}>Add KPI</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => addSpecificChart("bar")}
-        >
-          <Text style={styles.buttonText}>Bar Chart</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => addSpecificChart("line")}
-        >
-          <Text style={styles.buttonText}>Line Chart</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => addSpecificChart("pie")}
-        >
-          <Text style={styles.buttonText}>Pie Chart</Text>
-        </TouchableOpacity>
-
+        <Text style={styles.subtitle}>
+          Drag, resize, and arrange visuals
+          like Power BI
+        </Text>
       </View>
 
-      {/* CENTER */}
-      <View style={styles.centerCanvas}>
+      {/* MAIN LAYOUT */}
+      <View style={styles.mainLayout}>
+        {/* LEFT SIDEBAR */}
+        <View style={styles.leftSidebar}>
+          <Text style={styles.sidebarTitle}>
+            Datasets
+          </Text>
 
-        {/* TOOLBAR */}
-        <View style={styles.toolbar}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={addChart}
-          >
-            <Text style={styles.buttonText}>Add Chart</Text>
-          </TouchableOpacity>
+          <TextInput
+            value={dashboardName}
+            onChangeText={setDashboardName}
+            placeholder="Dashboard name"
+            placeholderTextColor="#777"
+            style={styles.nameInput}
+          />
 
           <TouchableOpacity
             style={styles.saveButton}
             onPress={saveDashboard}
           >
-            <Text style={styles.buttonText}>Save Layout</Text>
+            <Text style={styles.buttonText}>
+              Save Dashboard
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.sectionTitle}>
+            Saved Dashboards
+          </Text>
+
+          <ScrollView style={{ maxHeight: 180 }}>
+            {savedDashboards.map((dash) => (
+              <View
+                key={dash._id}
+                style={styles.savedItem}
+              >
+                <TouchableOpacity
+                  onPress={() =>
+                    openDashboard(dash)
+                  }
+                >
+                  <Text style={styles.savedText}>
+                    {dash.name}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    deleteDashboard(dash._id)
+                  }
+                >
+                  <Text style={styles.deleteText}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={addKpi}
+          >
+            <Text style={styles.buttonText}>
+              Add KPI
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              addSpecificChart("bar")
+            }
+          >
+            <Text style={styles.buttonText}>
+              Bar Chart
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              addSpecificChart("line")
+            }
+          >
+            <Text style={styles.buttonText}>
+              Line Chart
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              addSpecificChart("pie")
+            }
+          >
+            <Text style={styles.buttonText}>
+              Pie Chart
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* SCROLLABLE CANVAS */}
-        
-          <ScrollView showsVerticalScrollIndicator>
+        {/* CENTER */}
+        <View style={styles.centerCanvas}>
+          {/* TOOLBAR */}
+          <View style={styles.toolbar}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() =>
+                addSpecificChart("bar")
+              }
+            >
+              <Text style={styles.buttonText}>
+                Add Chart
+              </Text>
+            </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={saveDashboard}
+            >
+              <Text style={styles.buttonText}>
+                Save Layout
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* SCROLLABLE CANVAS */}
+          <ScrollView
+            showsVerticalScrollIndicator
+          >
             <View style={styles.canvas}>
+              {/* KPI ROW */}
+              <View style={styles.kpiRow}>
+                {widgets
+                  .filter(
+                    (w) => w.type === "kpi"
+                  )
+                  .map((widget, index) => {
+                    const kpi =
+                      getKpiData(index);
 
-              {widgets.map((widget) => (
-                <View
-                  key={widget.id}
-                  style={[
-                    styles.widget,
-                    
-                    widget.type === "kpi"
-                       ? styles.kpiWidget
-                       : styles.chartWidget,
-                  ]}
-                >
+                    return (
+                      <View
+                        key={widget.id}
+                        style={[
+                          styles.widget,
+                          styles.kpiWidget,
+                        ]}
+                      >
+                        <Text
+                          style={
+                            styles.widgetTitle
+                          }
+                        >
+                          {kpi.title}
+                        </Text>
 
-                  {/* KPI */}
-                  {widget.type === "kpi" ? (
-                    <>
-                      <Text style={styles.widgetTitle}>
-                        KPI Card
+                        <Text
+                          style={styles.kpiValue}
+                        >
+                          {kpi.value}
+                        </Text>
+
+                        <Text
+                          style={styles.growth}
+                        >
+                          {kpi.growth}
+                        </Text>
+                      </View>
+                    );
+                  })}
+              </View>
+
+              {/* CHART GRID */}
+              <View style={styles.chartGrid}>
+                {widgets
+                  .filter(
+                    (w) => w.type !== "kpi"
+                  )
+                  .map((widget) => (
+                    <View
+                      key={widget.id}
+                      style={[
+                        styles.widget,
+                        styles.chartWidget,
+                      ]}
+                    >
+                      <Text
+                        style={
+                          styles.widgetTitle
+                        }
+                      >
+                        {widget.type.toUpperCase()}{" "}
+                        CHART
                       </Text>
 
-                      <Text style={styles.kpiValue}>
-                        1,503
-                      </Text>
-
-                      <Text style={styles.growth}>
-                        Live
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.widgetTitle}>
-                        {widget.type.toUpperCase()} CHART
-                      </Text>
-
-                      <View style={{ flex: 1 }}>
-
-                        {widget.type === "bar" && (
+                      <View
+                        style={{ flex: 1 }}
+                      >
+                        {widget.type ===
+                          "bar" && (
                           <ResponsiveContainer
                             width="100%"
                             height="100%"
                           >
                             <BarChart
-                              data={getChartData(widget)}
+                              data={getChartData(
+                                widget
+                              )}
                             >
                               <XAxis dataKey="name" />
                               <YAxis />
                               <Tooltip />
+
                               <Bar
                                 dataKey="value"
                                 fill="#3b82f6"
@@ -550,17 +555,21 @@ const deleteDashboard = async (dashboardId: string) => {
                           </ResponsiveContainer>
                         )}
 
-                        {widget.type === "line" && (
+                        {widget.type ===
+                          "line" && (
                           <ResponsiveContainer
                             width="100%"
                             height="100%"
                           >
                             <LineChart
-                              data={getChartData(widget)}
+                              data={getChartData(
+                                widget
+                              )}
                             >
                               <XAxis dataKey="name" />
                               <YAxis />
                               <Tooltip />
+
                               <Line
                                 type="monotone"
                                 dataKey="value"
@@ -570,19 +579,27 @@ const deleteDashboard = async (dashboardId: string) => {
                           </ResponsiveContainer>
                         )}
 
-                        {widget.type === "pie" && (
+                        {widget.type ===
+                          "pie" && (
                           <ResponsiveContainer
                             width="100%"
                             height="100%"
                           >
                             <PieChart>
                               <Pie
-                                data={getChartData(widget)}
+                                data={getChartData(
+                                  widget
+                                )}
                                 dataKey="value"
                                 outerRadius={100}
                               >
-                                {getChartData(widget).map(
-                                  (_, index) => (
+                                {getChartData(
+                                  widget
+                                ).map(
+                                  (
+                                    _: any,
+                                    index: number
+                                  ) => (
                                     <Cell
                                       key={index}
                                       fill={
@@ -591,7 +608,9 @@ const deleteDashboard = async (dashboardId: string) => {
                                           "#22c55e",
                                           "#f59e0b",
                                           "#ef4444",
-                                        ][index % 4]
+                                        ][
+                                          index % 4
+                                        ]
                                       }
                                     />
                                   )
@@ -600,45 +619,40 @@ const deleteDashboard = async (dashboardId: string) => {
                             </PieChart>
                           </ResponsiveContainer>
                         )}
-
                       </View>
-                    </>
-                  )}
-                </View>
-              ))}
-
+                    </View>
+                  ))}
+              </View>
             </View>
-
           </ScrollView>
-       
+        </View>
 
+        {/* RIGHT SIDEBAR */}
+        <View style={styles.rightSidebar}>
+          <Text style={styles.sidebarTitle}>
+            Fields
+          </Text>
+
+          <ScrollView>
+            {selectedDataset?.columns?.map(
+              (col: any) => (
+                <View
+                  key={col.name}
+                  style={styles.fieldItem}
+                >
+                  <Text
+                    style={styles.fieldText}
+                  >
+                    {col.name}
+                  </Text>
+                </View>
+              )
+            )}
+          </ScrollView>
+        </View>
       </View>
-
-      {/* RIGHT SIDEBAR */}
-      <View style={styles.rightSidebar}>
-
-        <Text style={styles.sidebarTitle}>
-          Fields
-        </Text>
-
-        <ScrollView>
-          {selectedDataset?.columns?.map((col: any) => (
-            <View
-              key={col.name}
-              style={styles.fieldItem}
-            >
-              <Text style={styles.fieldText}>
-                {col.name}
-              </Text>
-            </View>
-          ))}
-        </ScrollView>
-
-      </View>
-
     </View>
-  </View>
-);
+  );
 }
 
 const styles = StyleSheet.create({
@@ -686,18 +700,26 @@ const styles = StyleSheet.create({
   },
 
   canvas: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
     padding: 12,
-    gap: 16,
-    flex: 1,
     minWidth: 1000,
     backgroundColor: "#111827",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#333",
+  },
+
+  kpiRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 24,
+    marginBottom: 24,
+  },
+
+  chartGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 24,
   },
 
   widget: {
@@ -710,14 +732,14 @@ const styles = StyleSheet.create({
   },
 
   kpiWidget: {
-  width: 240,
-  height: 140,
-},
+    width: 280,
+    height: 160,
+  },
 
-chartWidget: {
-  width: "48%",
-  height: 420,
-},
+  chartWidget: {
+    flexBasis: "48%",
+    height: 420,
+  },
 
   widgetTitle: {
     color: "#fff",
@@ -736,21 +758,6 @@ chartWidget: {
     color: "#22c55e",
     marginTop: 8,
     fontWeight: "bold",
-  },
-
-  chartArea: {
-    flex: 1,
-    justifyContent: "center",
-  },
-
-  resizeHandle: {
-    position: "absolute",
-    width: 18,
-    height: 18,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#2563eb",
-    borderTopLeftRadius: 8,
   },
 
   button: {
@@ -798,10 +805,6 @@ chartWidget: {
     marginBottom: 12,
   },
 
-  savedList: {
-    marginBottom: 16,
-  },
-
   savedItem: {
     backgroundColor: "#111827",
     borderRadius: 8,
@@ -811,6 +814,12 @@ chartWidget: {
 
   savedText: {
     color: "#fff",
+  },
+
+  deleteText: {
+    color: "#ef4444",
+    fontWeight: "bold",
+    marginTop: 6,
   },
 
   fieldItem: {
@@ -825,14 +834,8 @@ chartWidget: {
   },
 
   toolbar: {
-  flexDirection: "row",
-  gap: 12,
-  marginBottom: 12,
-},
-
-deleteText: {
-  color: "#ef4444",
-  fontWeight: "bold",
-},
-
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
 });
