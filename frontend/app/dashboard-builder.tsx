@@ -486,11 +486,12 @@ export default function DashboardBuilder() {
           <View
              style={{
                flexDirection: "row",
-               gap: 16,
                marginBottom: 20,
             }}
           >
-              <Text style={{ color: "#fff" }}>
+              <Text style={{ color: "#fff",
+                marginRight: 16,
+               }}>
                 Widgets: {widgets.length}
               </Text>
 
@@ -577,11 +578,12 @@ export default function DashboardBuilder() {
                       <View
                          style={{
                            flexDirection: "row",
-                           gap: 10,
                            marginBottom: 12,
                         }}
                       >
-                       <Text style={{ color: "#fff" }}>
+                       <Text style={{ color: "#fff",
+                        marginRight: 16,
+                        }}>
                          X: {widget.config?.xAxis || "Auto"}
                        </Text>
 
@@ -590,9 +592,118 @@ export default function DashboardBuilder() {
                        </Text>
                     </View>
 
+                    <View
+  style={{
+    flexDirection: "column",
+    marginBottom: 14,
+
+  }}
+>
+  {/* X AXIS SELECTOR */}
+  <View>
+    <Text
+      style={{
+        color: "#94a3b8",
+        marginBottom: 6,
+        fontSize: 12,
+      }}
+    >
+      X Axis
+    </Text>
+
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {selectedDataset?.columns?.map((col: any) => (
+        <TouchableOpacity
+          key={col.name}
+          style={{
+            backgroundColor:
+              widget.config?.xAxis === col.name
+                ? "#2563eb"
+                : "#1e293b",
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 8,
+            marginRight: 8,
+          }}
+          onPress={() => {
+            setWidgets((prev) =>
+              prev.map((w) =>
+                w.id === widget.id
+                  ? {
+                      ...w,
+                      config: {
+                        ...w.config,
+                        xAxis: col.name,
+                      },
+                    }
+                  : w
+              )
+            );
+          }}
+        >
+          <Text style={{ color: "#fff" }}>
+            {col.name}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  </View>
+
+  {/* METRIC SELECTOR */}
+  <View>
+    <Text
+      style={{
+        color: "#94a3b8",
+        marginBottom: 6,
+        fontSize: 12,
+      }}
+    >
+      Metric
+    </Text>
+
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {selectedDataset?.columns?.map((col: any) => (
+        <TouchableOpacity
+          key={col.name}
+          style={{
+            backgroundColor:
+              widget.config?.metric === col.name
+                ? "#22c55e"
+                : "#1e293b",
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 8,
+            marginRight: 8,
+          }}
+          onPress={() => {
+            setWidgets((prev) =>
+              prev.map((w) =>
+                w.id === widget.id
+                  ? {
+                      ...w,
+                      config: {
+                        ...w.config,
+                        metric: col.name,
+                      },
+                    }
+                  : w
+              )
+            );
+          }}
+        >
+          <Text style={{ color: "#fff" }}>
+            {col.name}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  </View>
+</View>
+
                       <View
                         style={{ flex: 1,
                           minHeight: 300,
+                          marginTop: 10,
                          }}
                       >
                         {widget.type ===
@@ -650,8 +761,13 @@ export default function DashboardBuilder() {
                                 widget
                               )}
                             >
-                              <XAxis dataKey="name" />
-                              <YAxis />
+                              <XAxis dataKey="name"
+                              stroke="#94a3b8"
+                              tick={{fill: "#94a3b8", fontSize: 12}} 
+                              />
+                              <YAxis 
+                              stroke="#94a3b8"
+                              tick= {{fill: "#94a3b8", fontSize: 12}}/>
                               <Tooltip />
 
                               <Line
@@ -797,7 +913,6 @@ const styles = StyleSheet.create({
   kpiRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 24,
     marginBottom: 24,
   },
 
@@ -828,6 +943,8 @@ const styles = StyleSheet.create({
     minWidth: 220,
     height: 140,
     justifyContent: "center",
+    marginRight: 24,
+    marginBottom: 24,
   },
 
   chartWidget: {
@@ -860,6 +977,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 10,
+     marginRight: 12,
   },
 
   saveButton: {
@@ -929,7 +1047,6 @@ const styles = StyleSheet.create({
 
   toolbar: {
     flexDirection: "row",
-    gap: 12,
     marginBottom: 12,
   },
 });
