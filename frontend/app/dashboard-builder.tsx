@@ -341,6 +341,26 @@ export default function DashboardBuilder() {
             Datasets
           </Text>
 
+          <ScrollView style={{ maxHeight: 120 }}>
+             {datasets.map((dataset: any) => (
+                <TouchableOpacity
+                   key={dataset._id}
+                   style={[
+                    styles.fieldItem,
+                    selectedDataset?._id === dataset._id && {
+                       backgroundColor: "#2563eb",
+                  },
+                ]}
+                onPress={() => setSelectedDataset(dataset)}
+           >
+            <Text style={styles.fieldText}>
+               {dataset.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+
           <TextInput
             value={dashboardName}
             onChangeText={setDashboardName}
@@ -462,6 +482,10 @@ export default function DashboardBuilder() {
           {/* SCROLLABLE CANVAS */}
           <ScrollView
             showsVerticalScrollIndicator
+            horizontal={false}
+            contentContainerStyle= {{
+              paddingBottom: 120,
+            }}
           >
             <View style={styles.canvas}>
               {/* KPI ROW */}
@@ -492,6 +516,7 @@ export default function DashboardBuilder() {
 
                         <Text
                           style={styles.kpiValue}
+                          numberOfLines={1}
                         >
                           {kpi.value}
                         </Text>
@@ -530,7 +555,9 @@ export default function DashboardBuilder() {
                       </Text>
 
                       <View
-                        style={{ flex: 1 }}
+                        style={{ flex: 1,
+                          minHeight: 300,
+                         }}
                       >
                         {widget.type ===
                           "bar" && (
@@ -682,7 +709,7 @@ const styles = StyleSheet.create({
   },
 
   leftSidebar: {
-    width: 240,
+    width: 220,
     backgroundColor: "#0f172a",
     padding: 12,
   },
@@ -694,13 +721,15 @@ const styles = StyleSheet.create({
   },
 
   rightSidebar: {
-    width: 240,
+    width: 220,
     backgroundColor: "#0f172a",
     padding: 12,
   },
 
   canvas: {
-    padding: 12,
+    paddingTop: 40,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
     minWidth: 1000,
     backgroundColor: "#111827",
     borderRadius: 12,
@@ -719,7 +748,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 24,
+    rowGap: 24,
   },
 
   widget: {
@@ -729,15 +758,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
 
   kpiWidget: {
     width: 280,
-    height: 160,
+    height: 140,
+    justifyContent: "center",
   },
 
   chartWidget: {
-    flexBasis: "48%",
+    width: "48%",
     height: 420,
   },
 
