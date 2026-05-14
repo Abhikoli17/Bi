@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Platform,
 } from "react-native";
 
 import {
@@ -26,6 +27,7 @@ import {
 import {
   Responsive,
   WidthProvider,
+  Layout,
 } from "react-grid-layout";
 
 import "react-grid-layout/css/styles.css";
@@ -37,55 +39,105 @@ import { apiCall } from "../utils/api";
 const ResponsiveGridLayout =
   WidthProvider(Responsive);
 
+interface Widget {
+  id: string;
+  type: "kpi" | "bar" | "line" | "pie";
+  layout: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  };
+}
+
 export default function DashboardBuilder() {
   const { token } = useAuthStore();
 
-  const [widgets, setWidgets] = useState<any[]>([
+  const [widgets, setWidgets] = useState<
+    Widget[]
+  >([
     {
       id: "kpi1",
       type: "kpi",
-      layout: { x: 0, y: 0, w: 3, h: 2 },
-    },
-    {
-      id: "kpi2",
-      type: "kpi",
-      layout: { x: 3, y: 0, w: 3, h: 2 },
-    },
-    {
-      id: "bar1",
-      type: "bar",
-      layout: { x: 0, y: 2, w: 6, h: 5 },
+      layout: {
+        x: 0,
+        y: 0,
+        w: 2,
+        h: 2,
+      },
     },
     {
       id: "line1",
       type: "line",
-      layout: { x: 6, y: 0, w: 4, h: 4 },
+      layout: {
+        x: 2,
+        y: 0,
+        w: 3,
+        h: 3,
+      },
+    },
+    {
+      id: "bar1",
+      type: "bar",
+      layout: {
+        x: 0,
+        y: 2,
+        w: 4,
+        h: 5,
+      },
     },
   ]);
 
-  const [datasets, setDatasets] = useState<any[]>([]);
+  const [datasets, setDatasets] = useState<
+    any[]
+  >([]);
+
   const [selectedDataset, setSelectedDataset] =
     useState<any>(null);
 
   const [dashboardName, setDashboardName] =
     useState("My Dashboard");
 
+  const sampleData = [
+    {
+      name: "2025-01-01",
+      value: 13,
+    },
+    {
+      name: "2025-01-02",
+      value: 4,
+    },
+    {
+      name: "2025-01-03",
+      value: 1,
+    },
+    {
+      name: "2025-01-04",
+      value: 10,
+    },
+    {
+      name: "2025-01-05",
+      value: 19,
+    },
+    {
+      name: "2025-01-06",
+      value: 14,
+    },
+    {
+      name: "2025-01-07",
+      value: 6,
+    },
+    {
+      name: "2025-01-08",
+      value: 14,
+    },
+  ];
+
   useEffect(() => {
     if (token) {
       loadDatasets();
     }
   }, [token]);
-
-  const sampleData = [
-    { name: "2025-01-01", value: 13 },
-    { name: "2025-01-02", value: 4 },
-    { name: "2025-01-03", value: 1 },
-    { name: "2025-01-04", value: 10 },
-    { name: "2025-01-05", value: 19 },
-    { name: "2025-01-06", value: 14 },
-    { name: "2025-01-07", value: 6 },
-    { name: "2025-01-08", value: 14 },
-  ];
 
   const loadDatasets = async () => {
     try {
@@ -112,9 +164,9 @@ export default function DashboardBuilder() {
     index: number
   ) => {
     return {
-      x: (index * 3) % 12,
-      y: 999,
-      w: type === "kpi" ? 3 : 6,
+      x: (index * 2) % 12,
+      y: Infinity,
+      w: type === "kpi" ? 2 : 4,
       h: type === "kpi" ? 2 : 5,
     };
   };
@@ -125,26 +177,36 @@ export default function DashboardBuilder() {
       {
         id: `kpi-${Date.now()}`,
         type: "kpi",
-        layout: createLayout("kpi", prev.length),
+        layout: createLayout(
+          "kpi",
+          prev.length
+        ),
       },
     ]);
   };
 
-  const addSpecificChart = (type: string) => {
+  const addSpecificChart = (
+    type: "bar" | "line" | "pie"
+  ) => {
     setWidgets((prev) => [
       ...prev,
       {
         id: `${type}-${Date.now()}`,
         type,
-        layout: createLayout(type, prev.length),
+        layout: createLayout(
+          type,
+          prev.length
+        ),
       },
     ]);
   };
 
-  const onLayoutChange = (layout: any[]) => {
+  const onLayoutChange = (
+    currentLayout: Layout[]
+  ) => {
     setWidgets((prev) =>
       prev.map((widget) => {
-        const item = layout.find(
+        const item = currentLayout.find(
           (l) => l.i === widget.id
         );
 
@@ -181,8 +243,96 @@ export default function DashboardBuilder() {
     };
   };
 
+  const renderChart = (
+    type: string
+  ) => {
+    if (type === "bar") {
+      return (
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+        >
+          <BarChart data={getChartData()}>
+            <XAxis
+              dataKey="name"
+              stroke="#94a3b8"
+            />
+
+            <YAxis stroke="#94a3b8" />
+
+            <Tooltip />
+
+            <Bar
+              dataKey="value"
+              fill="#3b82f6"
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (type === "line") {
+      return (
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+        >
+          <LineChart data={getChartData()}>
+            <XAxis
+              dataKey="name"
+              stroke="#94a3b8"
+            />
+
+            <YAxis stroke="#94a3b8" />
+
+            <Tooltip />
+
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#22c55e"
+              strokeWidth={3}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    return (
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+      >
+        <PieChart>
+          <Pie
+            data={getChartData()}
+            dataKey="value"
+            outerRadius={100}
+          >
+            {getChartData().map(
+              (_, index) => (
+                <Cell
+                  key={index}
+                  fill={
+                    [
+                      "#3b82f6",
+                      "#22c55e",
+                      "#f59e0b",
+                      "#ef4444",
+                    ][index % 4]
+                  }
+                />
+              )
+            )}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+    );
+  };
+
   const renderWidget = (
-    widget: any,
+    widget: Widget,
     index: number
   ) => {
     if (widget.type === "kpi") {
@@ -248,85 +398,7 @@ export default function DashboardBuilder() {
         </View>
 
         <View style={{ flex: 1 }}>
-          {widget.type === "bar" && (
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-            >
-              <BarChart data={getChartData()}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#94a3b8"
-                />
-
-                <YAxis stroke="#94a3b8" />
-
-                <Tooltip />
-
-                <Bar
-                  dataKey="value"
-                  fill="#3b82f6"
-                  radius={[8, 8, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-
-          {widget.type === "line" && (
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-            >
-              <LineChart data={getChartData()}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#94a3b8"
-                />
-
-                <YAxis stroke="#94a3b8" />
-
-                <Tooltip />
-
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#22c55e"
-                  strokeWidth={3}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-
-          {widget.type === "pie" && (
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-            >
-              <PieChart>
-                <Pie
-                  data={getChartData()}
-                  dataKey="value"
-                  outerRadius={100}
-                >
-                  {getChartData().map(
-                    (_: any, index: number) => (
-                      <Cell
-                        key={index}
-                        fill={
-                          [
-                            "#3b82f6",
-                            "#22c55e",
-                            "#f59e0b",
-                            "#ef4444",
-                          ][index % 4]
-                        }
-                      />
-                    )
-                  )}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          )}
+          {renderChart(widget.type)}
         </View>
       </View>
     );
@@ -382,7 +454,8 @@ export default function DashboardBuilder() {
                   styles.fieldItem,
                   selectedDataset?._id ===
                     dataset._id && {
-                    backgroundColor: "#2563eb",
+                    backgroundColor:
+                      "#2563eb",
                   },
                 ]}
                 onPress={() =>
@@ -460,6 +533,15 @@ export default function DashboardBuilder() {
           <View style={styles.dashboardSurface}>
             <ResponsiveGridLayout
               className="layout"
+              layouts={{
+                lg: widgets.map((widget) => ({
+                  i: widget.id,
+                  x: widget.layout.x,
+                  y: widget.layout.y,
+                  w: widget.layout.w,
+                  h: widget.layout.h,
+                })),
+              }}
               breakpoints={{
                 lg: 1200,
                 md: 996,
@@ -489,19 +571,6 @@ export default function DashboardBuilder() {
                 (widget, index) => (
                   <View
                     key={widget.id}
-                    data-grid={{
-                      i: widget.id,
-                      x:
-                        widget.layout?.x || 0,
-                      y:
-                        widget.layout?.y || 0,
-                      w:
-                        widget.layout?.w || 4,
-                      h:
-                        widget.layout?.h || 4,
-                      minW: 2,
-                      minH: 2,
-                    }}
                   >
                     {renderWidget(
                       widget,
@@ -590,13 +659,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#111827",
     padding: 16,
-    overflow: "hidden",
   },
 
   dashboardSurface: {
     flex: 1,
     backgroundColor: "#f3f4f6",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 12,
     overflow: "hidden",
   },
@@ -608,8 +676,8 @@ const styles = StyleSheet.create({
   },
 
   widget: {
-    backgroundColor: "#0b1220",
-    borderRadius: 10,
+    backgroundColor: "#071226",
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#1e293b",
     padding: 12,
@@ -673,6 +741,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+
+    ...(Platform.OS === "web"
+      ? {
+          cursor: "grab" as any,
+        }
+      : {}),
   },
 
   dragText: {
@@ -715,6 +789,7 @@ const styles = StyleSheet.create({
 
   fieldText: {
     color: "#fff",
+    fontSize: 13,
   },
 
   nameInput: {
