@@ -23,8 +23,20 @@ import {
   Tooltip,
 } from "recharts";
 
+import {
+  Responsive,
+  WidthProvider,
+} from "react-grid-layout";
+
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
 import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
+
+//const ReactGridLayout = WidthProvider(GridLayout);
+const ResponsiveGridLayout =
+  WidthProvider(Responsive);
 
 export default function DashboardBuilder() {
   const { token } = useAuthStore();
@@ -33,14 +45,17 @@ export default function DashboardBuilder() {
     {
       id: "kpi1",
       type: "kpi",
+      layout: { x: 0, y: 0, w: 3, h: 2 },
     },
     {
       id: "kpi2",
       type: "kpi",
+      layout: { x: 3, y: 0, w: 3, h: 2 },
     },
     {
       id: "bar1",
       type: "bar",
+      layout: { x: 0, y: 2, w: 6, h: 5 },
       config: {
         xAxis: "",
         metric: "",
@@ -78,12 +93,25 @@ export default function DashboardBuilder() {
     }
   }, [token]);
 
+  const createLayout = (
+    type: string,
+    index: number
+  ) => {
+    return {
+      x: (index * 3) % 12,
+      y: Infinity,
+      w: type === "kpi" ? 3 : 6,
+      h: type === "kpi" ? 2 : 5,
+    };
+  };
+
   const addKpi = () => {
     setWidgets((prev) => [
       ...prev,
       {
         id: `kpi-${Date.now()}`,
         type: "kpi",
+        layout: createLayout("kpi", prev.length),
       },
     ]);
   };
@@ -94,6 +122,7 @@ export default function DashboardBuilder() {
       {
         id: `${type}-${Date.now()}`,
         type,
+        layout: createLayout(type, prev.length),
         config: {
           xAxis: "",
           metric: "",
@@ -101,6 +130,28 @@ export default function DashboardBuilder() {
         },
       },
     ]);
+  };
+
+  const onLayoutChange = (layout: any[]) => {
+    setWidgets((prev) =>
+      prev.map((widget) => {
+        const item = layout.find(
+          (l) => l.i === widget.id
+        );
+
+        if (!item) return widget;
+
+        return {
+          ...widget,
+          layout: {
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h,
+          },
+        };
+      })
+    );
   };
 
   const getChartData = (widget: any) => {
@@ -122,9 +173,9 @@ export default function DashboardBuilder() {
         )
       )?.name;
 
-      if (!metric) {
-         return sampleData;
-      }
+    if (!metric) {
+      return sampleData;
+    }
 
     const aggregation =
       widget.config?.aggregation || "SUM";
@@ -289,55 +340,160 @@ export default function DashboardBuilder() {
     Alert.alert("Dashboard Saved");
   };
 
-  const openDashboard = (dashboard: any) => {
-    setDashboardName(dashboard.name);
-
-    setWidgets(
-      dashboard.layout ||
-        dashboard.widgets ||
-        []
-    );
-
-    setCurrentDashboardId(dashboard._id);
-  };
-
-  const deleteDashboard = async (
-    dashboardId: string
+  const renderWidget = (
+    widget: any,
+    index: number
   ) => {
-    if (!token) return;
+    if (widget.type === "kpi") {
+      const kpi = getKpiData(index);
 
-    await apiCall(
-      `/api/dashboard-layouts/${dashboardId}`,
-      {
-        method: "DELETE",
-      },
-      token
-    );
+      return (
+        <View style={[styles.widget, styles.kpiWidget]}>
+          <Text style={styles.widgetTitle}>
+            {kpi.title}
+          </Text>
 
-    setSavedDashboards((prev) =>
-      prev.filter((d) => d._id !== dashboardId)
-    );
+          <Text style={styles.kpiValue}>
+            {kpi.value}
+          </Text>
 
-    if (currentDashboardId === dashboardId) {
-      setCurrentDashboardId(null);
+          <Text style={styles.growth}>
+            {kpi.growth}
+          </Text>
+        </View>
+      );
     }
+
+    return (
+      <View style={[styles.widget, styles.chartWidget]}>
+        <View style={styles.dragHandle}>
+          <Text style={styles.dragText}>
+            Drag Widget
+          </Text>
+        </View>
+
+        <Text style={styles.widgetTitle}>
+          {widget.config?.metric || "Sales"} by{" "}
+          {widget.config?.xAxis || "Category"}
+        </Text>
+
+        <View
+          style={{
+            flexDirection: "row",
+            marginBottom: 10,
+          }}
+        >
+          <Text
+            style={{
+              color: "#94a3b8",
+              marginRight: 14,
+            }}
+          >
+            X: {widget.config?.xAxis || "Auto"}
+          </Text>
+
+          <Text style={{ color: "#94a3b8" }}>
+            Metric:{" "}
+            {widget.config?.metric || "Auto"}
+          </Text>
+        </View>
+
+        <View style={{ flex: 1 }}>
+          {widget.type === "bar" && (
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <BarChart
+                data={getChartData(widget)}
+              >
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+
+                <Bar
+                  dataKey="value"
+                  fill="#3b82f6"
+                  radius={[8, 8, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+
+          {widget.type === "line" && (
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <LineChart
+                data={getChartData(widget)}
+              >
+                <XAxis
+                  dataKey="name"
+                  stroke="#94a3b8"
+                />
+
+                <YAxis stroke="#94a3b8" />
+
+                <Tooltip />
+
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#22c55e"
+                  strokeWidth={3}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+
+          {widget.type === "pie" && (
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <PieChart>
+                <Pie
+                  data={getChartData(widget)}
+                  dataKey="value"
+                  outerRadius={100}
+                >
+                  {getChartData(widget).map(
+                    (_: any, index: number) => (
+                      <Cell
+                        key={index}
+                        fill={
+                          [
+                            "#3b82f6",
+                            "#22c55e",
+                            "#f59e0b",
+                            "#ef4444",
+                          ][index % 4]
+                        }
+                      />
+                    )
+                  )}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </View>
+      </View>
+    );
   };
 
   return (
     <View style={styles.page}>
-      {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.title}>
           Dashboard Builder
         </Text>
 
         <Text style={styles.subtitle}>
-          Drag, resize, and arrange visuals
-          like Power BI
+          Drag, resize, and rearrange widgets
         </Text>
       </View>
 
-      {/* MAIN LAYOUT */}
       <View style={styles.mainLayout}>
         {/* LEFT SIDEBAR */}
         <View style={styles.leftSidebar}>
@@ -346,29 +502,31 @@ export default function DashboardBuilder() {
           </Text>
 
           <ScrollView style={{ maxHeight: 120 }}>
-             {datasets.map((dataset: any) => (
-                <TouchableOpacity
-                   key={dataset._id}
-                   style={[
-                    styles.fieldItem,
-                    selectedDataset?._id === dataset._id && {
-                       backgroundColor: "#2563eb",
+            {datasets.map((dataset: any) => (
+              <TouchableOpacity
+                key={dataset._id}
+                style={[
+                  styles.fieldItem,
+                  selectedDataset?._id ===
+                    dataset._id && {
+                    backgroundColor: "#2563eb",
                   },
                 ]}
-                onPress={() => setSelectedDataset(dataset)}
-           >
-            <Text style={styles.fieldText}>
-               {dataset.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
+                onPress={() =>
+                  setSelectedDataset(dataset)
+                }
+              >
+                <Text style={styles.fieldText}>
+                  {dataset.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
           <TextInput
             value={dashboardName}
             onChangeText={setDashboardName}
-            placeholder="Dashboard name"
+            placeholder="Dashboard Name"
             placeholderTextColor="#777"
             style={styles.nameInput}
           />
@@ -381,39 +539,6 @@ export default function DashboardBuilder() {
               Save Dashboard
             </Text>
           </TouchableOpacity>
-
-          <Text style={styles.sectionTitle}>
-            Saved Dashboards
-          </Text>
-
-          <ScrollView style={{ maxHeight: 180 }}>
-            {savedDashboards.map((dash) => (
-              <View
-                key={dash._id}
-                style={styles.savedItem}
-              >
-                <TouchableOpacity
-                  onPress={() =>
-                    openDashboard(dash)
-                  }
-                >
-                  <Text style={styles.savedText}>
-                    {dash.name}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    deleteDashboard(dash._id)
-                  }
-                >
-                  <Text style={styles.deleteText}>
-                    Delete
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
 
           <TouchableOpacity
             style={styles.button}
@@ -431,7 +556,7 @@ export default function DashboardBuilder() {
             }
           >
             <Text style={styles.buttonText}>
-              Bar Chart
+              Add Bar Chart
             </Text>
           </TouchableOpacity>
 
@@ -442,7 +567,7 @@ export default function DashboardBuilder() {
             }
           >
             <Text style={styles.buttonText}>
-              Line Chart
+              Add Line Chart
             </Text>
           </TouchableOpacity>
 
@@ -453,378 +578,52 @@ export default function DashboardBuilder() {
             }
           >
             <Text style={styles.buttonText}>
-              Pie Chart
+              Add Pie Chart
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* CENTER */}
         <View style={styles.centerCanvas}>
-          {/* TOOLBAR */}
-          <View style={styles.toolbar}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() =>
-                addSpecificChart("bar")
-              }
-            >
-              <Text style={styles.buttonText}>
-                Add Chart
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={saveDashboard}
-            >
-              <Text style={styles.buttonText}>
-                Save Layout
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View
-             style={{
-               flexDirection: "row",
-               marginBottom: 20,
+          <ResponsiveGridLayout
+              className="layout"
+              breakpoints={{
+              lg: 1200,
+              md: 996,
+              sm: 768,
+              xs: 480,
             }}
-          >
-              <Text style={{ color: "#fff",
-                marginRight: 16,
-               }}>
-                Widgets: {widgets.length}
-              </Text>
-
-              <Text style={{ color: "#22c55e" }}>
-                 Dataset: {selectedDataset?.name || "None"}
-              </Text>
-          </View>
-
-          {/* SCROLLABLE CANVAS */}
-          <ScrollView
-            showsVerticalScrollIndicator
-            horizontal={false}
-            contentContainerStyle= {{
-              paddingBottom: 120,
+              cols={{
+              lg: 12,
+              md: 10,
+              sm: 6,
+              xs: 2,
             }}
+              rowHeight={90}
+              width={1200}
+              draggableHandle=".dragHandle"
+              onLayoutChange={onLayoutChange}
+              margin={[16, 16]}
+              isResizable
+              isDraggable
           >
-            <View style={styles.canvas}>
-              {/* KPI ROW */}
-              <View style={styles.kpiRow}>
-                {widgets
-                  .filter(
-                    (w) => w.type === "kpi"
-                  )
-                  .map((widget, index) => {
-                    const kpi =
-                      getKpiData(index);
-
-                    return (
-                      <View
-                        key={widget.id}
-                        style={[
-                          styles.widget,
-                          styles.kpiWidget,
-                        ]}
-                      >
-                        <Text
-                          style={
-                            styles.widgetTitle
-                          }
-                        >
-                          {kpi.title}
-                        </Text>
-
-                        <Text
-                          style={styles.kpiValue}
-                          numberOfLines={1}
-                        >
-                          {kpi.value}
-                        </Text>
-
-                        <Text
-                          style={styles.growth}
-                        >
-                          {kpi.growth}
-                        </Text>
-                      </View>
-                    );
-                  })}
+            {widgets.map((widget, index) => (
+              <View
+                key={widget.id}
+                data-grid={{
+                  i: widget.id,
+                  x: widget.layout?.x || 0,
+                  y: widget.layout?.y || 0,
+                  w: widget.layout?.w || 4,
+                  h: widget.layout?.h || 4,
+                  minW: 2,
+                  minH: 2,
+                }}
+              >
+                {renderWidget(widget, index)}
               </View>
-
-              {/* CHART GRID */}
-              <View style={styles.chartGrid}>
-                {widgets
-                  .filter(
-                    (w) => w.type !== "kpi"
-                  )
-                  .map((widget) => (
-                    <View
-                      key={widget.id}
-                      style={[
-                        styles.widget,
-                        styles.chartWidget,
-                      ]}
-                    >
-                      <Text
-                        style={
-                          styles.widgetTitle
-                        }
-                      >
-                        {widget.config?.metric || "Sales"} by{" "}
-                        {widget.config?.xAxis || "Category"}
-                      </Text>
-
-                      <View
-                         style={{
-                           flexDirection: "row",
-                           marginBottom: 12,
-                        }}
-                      >
-                       <Text style={{ color: "#fff",
-                        marginRight: 16,
-                        }}>
-                         X: {widget.config?.xAxis || "Auto"}
-                       </Text>
-
-                       <Text style={{ color: "#fff" }}>
-                          Metric: {widget.config?.metric || "Auto"}
-                       </Text>
-                    </View>
-
-                    <View
-  style={{
-    flexDirection: "column",
-    marginBottom: 14,
-
-  }}
->
-  {/* X AXIS SELECTOR */}
-  <View>
-    <Text
-      style={{
-        color: "#94a3b8",
-        marginBottom: 6,
-        fontSize: 12,
-      }}
-    >
-      X Axis
-    </Text>
-
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {selectedDataset?.columns?.map((col: any) => (
-        <TouchableOpacity
-          key={col.name}
-          style={{
-            backgroundColor:
-              widget.config?.xAxis === col.name
-                ? "#2563eb"
-                : "#1e293b",
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 8,
-            marginRight: 8,
-          }}
-          onPress={() => {
-            setWidgets((prev) =>
-              prev.map((w) =>
-                w.id === widget.id
-                  ? {
-                      ...w,
-                      config: {
-                        ...w.config,
-                        xAxis: col.name,
-                      },
-                    }
-                  : w
-              )
-            );
-          }}
-        >
-          <Text style={{ color: "#fff" }}>
-            {col.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  </View>
-
-  {/* METRIC SELECTOR */}
-  <View>
-    <Text
-      style={{
-        color: "#94a3b8",
-        marginBottom: 6,
-        fontSize: 12,
-      }}
-    >
-      Metric
-    </Text>
-
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {selectedDataset?.columns?.map((col: any) => (
-        <TouchableOpacity
-          key={col.name}
-          style={{
-            backgroundColor:
-              widget.config?.metric === col.name
-                ? "#22c55e"
-                : "#1e293b",
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 8,
-            marginRight: 8,
-          }}
-          onPress={() => {
-            setWidgets((prev) =>
-              prev.map((w) =>
-                w.id === widget.id
-                  ? {
-                      ...w,
-                      config: {
-                        ...w.config,
-                        metric: col.name,
-                      },
-                    }
-                  : w
-              )
-            );
-          }}
-        >
-          <Text style={{ color: "#fff" }}>
-            {col.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  </View>
-</View>
-
-                      <View
-                        style={{ flex: 1,
-                          minHeight: 300,
-                          marginTop: 10,
-                         }}
-                      >
-                        {widget.type ===
-                          "bar" && (
-                          <ResponsiveContainer
-                            width="100%"
-                            height="100%"
-                          >
-                            <BarChart
-                              data={getChartData(
-                                widget
-                              )}
-                            >
-                              <XAxis dataKey="name" />
-                              <YAxis />
-                              <Tooltip />
-
-                              <defs>
-                                 <linearGradient
-                                    id="colorUv"
-                                    x1="0"
-                                    y1="0"
-                                    x2="0"
-                                    y2="1"
-                                 >
-                                  <stop
-                                    offset="5%"
-                                    stopColor="#3b82f6"
-                                    stopOpacity={0.9}
-                                  />
-                                  <stop
-                                    offset="95%"
-                                    stopColor="#1d4ed8"
-                                    stopOpacity={0.6}
-                                  />
-                                 </linearGradient>
-                               </defs>
-
-                              <Bar
-                                dataKey="value"
-                                fill="url(#colorUv)"
-                              />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
-
-                        {widget.type ===
-                          "line" && (
-                          <ResponsiveContainer
-                            width="100%"
-                            height="100%"
-                          >
-                            <LineChart
-                              data={getChartData(
-                                widget
-                              )}
-                            >
-                              <XAxis dataKey="name"
-                              stroke="#94a3b8"
-                              tick={{fill: "#94a3b8", fontSize: 12}} 
-                              />
-                              <YAxis 
-                              stroke="#94a3b8"
-                              tick= {{fill: "#94a3b8", fontSize: 12}}/>
-                              <Tooltip />
-
-                              <Line
-                                type="monotone"
-                                dataKey="value"
-                                stroke="#22c55e"
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        )}
-
-                        {widget.type ===
-                          "pie" && (
-                          <ResponsiveContainer
-                            width="100%"
-                            height="100%"
-                          >
-                            <PieChart margin={{top: 20}}>
-                              <Pie
-                                data={getChartData(
-                                  widget
-                                )}
-                                dataKey="value"
-                                outerRadius={140}
-                              >
-                                {getChartData(
-                                  widget
-                                ).map(
-                                  (
-                                    _: any,
-                                    index: number
-                                  ) => (
-                                    <Cell
-                                      key={index}
-                                      fill={
-                                        [
-                                          "#3b82f6",
-                                          "#22c55e",
-                                          "#f59e0b",
-                                          "#ef4444",
-                                        ][
-                                          index % 4
-                                        ]
-                                      }
-                                    />
-                                  )
-                                )}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
-                        )}
-                      </View>
-                    </View>
-                  ))}
-              </View>
-            </View>
-          </ScrollView>
+            ))}
+          </ResponsiveGridLayout>
         </View>
 
         {/* RIGHT SIDEBAR */}
@@ -836,16 +635,14 @@ export default function DashboardBuilder() {
           <ScrollView>
             {selectedDataset?.columns?.map(
               (col: any) => (
-                <TouchableOpacity
+                <View
                   key={col.name}
                   style={styles.fieldItem}
                 >
-                  <Text
-                    style={styles.fieldText}
-                  >
+                  <Text style={styles.fieldText}>
                     {col.name}
                   </Text>
-                </TouchableOpacity>
+                </View>
               )
             )}
           </ScrollView>
@@ -857,23 +654,23 @@ export default function DashboardBuilder() {
 
 const styles = StyleSheet.create({
   page: {
-    minHeight: "100%",
-    backgroundColor: "#0a0a0a",
+    flex: 1,
+    backgroundColor: "#020617",
   },
 
   header: {
-    padding: 16,
+    padding: 20,
   },
 
   title: {
     color: "#fff",
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: "bold",
   },
 
   subtitle: {
-    color: "#999",
-    marginTop: 4,
+    color: "#94a3b8",
+    marginTop: 6,
   },
 
   mainLayout: {
@@ -882,110 +679,91 @@ const styles = StyleSheet.create({
   },
 
   leftSidebar: {
-    width: 220,
+    width: 240,
     backgroundColor: "#0f172a",
-    padding: 12,
+    padding: 14,
   },
 
   centerCanvas: {
     flex: 1,
-    padding: 12,
-    backgroundColor: "#0a0a0a",
+    padding: 14,
+    backgroundColor: "#020617",
   },
 
   rightSidebar: {
     width: 220,
     backgroundColor: "#0f172a",
-    padding: 12,
-  },
-
-  canvas: {
-    paddingTop: 40,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    minWidth: 1000,
-    backgroundColor: "#111827",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-
-  kpiRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 24,
-  },
-
-  chartGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 24,
+    padding: 14,
   },
 
   widget: {
     backgroundColor: "#0f172a",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#334155",
-    borderRadius: 12,
+    borderColor: "#1e293b",
     padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
-    cursor: "pointer",
-    //transitionDuration: "0.2s",
+    height: "100%",
+    overflow: "hidden",
   },
 
   kpiWidget: {
-    flexBasis: "23%",
-    minWidth: 220,
-    height: 140,
     justifyContent: "center",
-    marginRight: 24,
-    marginBottom: 24,
   },
 
   chartWidget: {
-    width: "48%",
-    height: 420,
+    flex: 1,
   },
 
   widgetTitle: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
     marginBottom: 12,
   },
 
   kpiValue: {
     color: "#fff",
-    fontSize: 42,
+    fontSize: 36,
     fontWeight: "bold",
   },
 
   growth: {
     color: "#22c55e",
     marginTop: 8,
+  },
+
+  dragHandle: {
+    backgroundColor: "#1e293b",
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+    
+  },
+
+  dragText: {
+    color: "#94a3b8",
+    fontSize: 12,
+  },
+
+  sidebarTitle: {
+    color: "#fff",
+    fontSize: 20,
     fontWeight: "bold",
+    marginBottom: 14,
   },
 
   button: {
-    backgroundColor: "#1f2937",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    backgroundColor: "#1e293b",
+    padding: 12,
+    borderRadius: 10,
     marginBottom: 10,
-     marginRight: 12,
   },
 
   saveButton: {
     backgroundColor: "#2563eb",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 10,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
   },
 
   buttonText: {
@@ -993,51 +771,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  sidebarTitle: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-
-  sectionTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginVertical: 12,
-  },
-
-  nameInput: {
-    backgroundColor: "#111827",
-    borderWidth: 1,
-    borderColor: "#333",
-    borderRadius: 8,
-    padding: 12,
-    color: "#fff",
-    marginBottom: 12,
-  },
-
-  savedItem: {
-    backgroundColor: "#111827",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-  },
-
-  savedText: {
-    color: "#fff",
-  },
-
-  deleteText: {
-    color: "#ef4444",
-    fontWeight: "bold",
-    marginTop: 6,
-  },
-
   fieldItem: {
     backgroundColor: "#1e293b",
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 8,
   },
 
@@ -1045,8 +782,13 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
 
-  toolbar: {
-    flexDirection: "row",
+  nameInput: {
+    backgroundColor: "#111827",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 10,
+    padding: 12,
+    color: "#fff",
     marginBottom: 12,
   },
 });
