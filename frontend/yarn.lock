@@ -49,7 +49,7 @@
     json5 "^2.2.3"
     semver "^6.3.1"
 
-"@babel/generator@^7.20.5", "@babel/generator@^7.25.0", "@babel/generator@^7.29.0", "@babel/generator@^7.29.1":
+"@babel/generator@^7.20.5", "@babel/generator@^7.25.0", "@babel/generator@^7.29.0":
   version "7.29.1"
   resolved "https://registry.npmjs.org/@babel/generator/-/generator-7.29.1.tgz"
   integrity sha512-qsaF+9Qcm2Qv8SRIMMscAvG4O3lJ0F1GuMo5HR/Bp02LopNgnZBC/EkbevHFeGs4ls/oPz9v+Bsmzbkbe+0dUw==
@@ -1992,19 +1992,17 @@
   dependencies:
     "@types/node" "*"
 
-"@types/node@*":
-  version "25.6.0"
-  resolved "https://registry.npmjs.org/@types/node/-/node-25.6.0.tgz"
-  integrity sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==
-  dependencies:
-    undici-types "~7.19.0"
-
-"@types/node@^22.10.1":
+"@types/node@*", "@types/node@^22.10.1":
   version "22.19.17"
   resolved "https://registry.npmjs.org/@types/node/-/node-22.19.17.tgz"
   integrity sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==
   dependencies:
     undici-types "~6.21.0"
+
+"@types/react-dom@*", "@types/react-dom@^19.1.0":
+  version "19.1.0"
+  resolved "https://registry.npmjs.org/@types/react-dom/-/react-dom-19.1.0.tgz"
+  integrity sha512-21E2zejNNRtjG4hKIyJz4aWswGEcNFTgttA0bZIRGjj1HA/tbSUxIJnIcYbn98pwJck0cS1bsQhn6eaKqbcFWw==
 
 "@types/react-grid-layout@^1.3.6":
   version "1.3.6"
@@ -2013,10 +2011,10 @@
   dependencies:
     "@types/react" "*"
 
-"@types/react@*", "@types/react@^18.2.25 || ^19", "@types/react@^19.1.0", "@types/react@>=18.0.0", "@types/react@~19.1.0":
-  version "19.1.17"
-  resolved "https://registry.npmjs.org/@types/react/-/react-19.1.17.tgz"
-  integrity sha512-Qec1E3mhALmaspIrhWt9jkQMNdw6bReVu64mjvhbhq2NFPftLPVr+l1SZgmw/66WwBNpDh7ao5AT6gF5v41PFA==
+"@types/react@*", "@types/react@^18.2.25 || ^19", "@types/react@^19.0.0", "@types/react@^19.1.0", "@types/react@>=18.0.0":
+  version "19.1.0"
+  resolved "https://registry.npmjs.org/@types/react/-/react-19.1.0.tgz"
+  integrity sha512-UaicktuQI+9UKyA4njtDOGBD/67t8YEBt2xdfqu8+gP9hqPUPsiXlNPcpS2gVdjmis5GKPG3fCxbQLVgxsQZ8w==
   dependencies:
     csstype "^3.0.2"
 
@@ -2195,14 +2193,6 @@ accepts@^1.3.7, accepts@^1.3.8:
   dependencies:
     mime-types "~2.1.34"
     negotiator "0.6.3"
-
-accepts@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz"
-  integrity sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==
-  dependencies:
-    mime-types "^3.0.0"
-    negotiator "^1.0.0"
 
 acorn-jsx@^5.3.2:
   version "5.3.2"
@@ -2605,14 +2595,7 @@ bplist-creator@0.1.0:
   dependencies:
     stream-buffers "2.2.x"
 
-bplist-parser@^0.3.1:
-  version "0.3.2"
-  resolved "https://registry.npmjs.org/bplist-parser/-/bplist-parser-0.3.2.tgz"
-  integrity sha512-apC2+fspHGI3mMKj+dGevkGo/tCqVB8jMb6i+OX+E29p0Iposz07fABkRIfVUPNd5A5VbuOz1bZbnmkKLYF+wQ==
-  dependencies:
-    big-integer "1.6.x"
-
-bplist-parser@0.3.1:
+bplist-parser@^0.3.1, bplist-parser@0.3.1:
   version "0.3.1"
   resolved "https://registry.npmjs.org/bplist-parser/-/bplist-parser-0.3.1.tgz"
   integrity sha512-PyJxiNtA5T2PlLIeBot4lbp7rj4OadzjnMZD/G5zuBNt8ei/yCU7+wW0h2bag9vr8c+/WuRWmSxbqAl9hL1rBA==
@@ -2861,7 +2844,7 @@ clone@^1.0.2:
   resolved "https://registry.npmjs.org/clone/-/clone-1.0.4.tgz"
   integrity sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==
 
-clsx@^2.0.0, clsx@^2.1.1:
+clsx@^2.1.1:
   version "2.1.1"
   resolved "https://registry.npmjs.org/clsx/-/clsx-2.1.1.tgz"
   integrity sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==
@@ -3289,12 +3272,7 @@ dotenv-expand@~11.0.6:
   dependencies:
     dotenv "^16.4.5"
 
-dotenv@^16.4.5:
-  version "16.6.1"
-  resolved "https://registry.npmjs.org/dotenv/-/dotenv-16.6.1.tgz"
-  integrity sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==
-
-dotenv@~16.4.5:
+dotenv@^16.4.5, dotenv@~16.4.5:
   version "16.4.7"
   resolved "https://registry.npmjs.org/dotenv/-/dotenv-16.4.7.tgz"
   integrity sha512-47qPchRCykZC03FhkYAhrvwU4xDBFIj1QPqaarj6mdM/hgUzfPHcpkHJOn3mJAufFeeAxAzeGsr5X0M4k6fLZQ==
@@ -4315,11 +4293,6 @@ hermes-estree@0.32.0:
   resolved "https://registry.npmjs.org/hermes-estree/-/hermes-estree-0.32.0.tgz"
   integrity sha512-KWn3BqnlDOl97Xe1Yviur6NbgIZ+IP+UVSpshlZWkq+EtoHg6/cwiDj/osP9PCEgFE15KBm1O55JRwbMEm5ejQ==
 
-hermes-estree@0.35.0:
-  version "0.35.0"
-  resolved "https://registry.npmjs.org/hermes-estree/-/hermes-estree-0.35.0.tgz"
-  integrity sha512-xVx5Opwy8Oo1I5yGpVRhCvWL/iV3M+ylksSKVNlxxD90cpDpR/AR1jLYqK8HWihm065a6UI3HeyAmYzwS8NOOg==
-
 hermes-parser@^0.29.1, hermes-parser@0.29.1:
   version "0.29.1"
   resolved "https://registry.npmjs.org/hermes-parser/-/hermes-parser-0.29.1.tgz"
@@ -4333,13 +4306,6 @@ hermes-parser@0.32.0:
   integrity sha512-g4nBOWFpuiTqjR3LZdRxKUkij9iyveWeuks7INEsMX741f3r9xxrOe8TeQfUxtda0eXmiIFiMQzoeSQEno33Hw==
   dependencies:
     hermes-estree "0.32.0"
-
-hermes-parser@0.35.0:
-  version "0.35.0"
-  resolved "https://registry.npmjs.org/hermes-parser/-/hermes-parser-0.35.0.tgz"
-  integrity sha512-9JLjeHxBx8T4CAsydZR49PNZUaix+WpQJwu9p2010lu+7Kwl6D/7wYFFJxoz+aXkaaClp9Zfg6W6/zVlSJORaA==
-  dependencies:
-    hermes-estree "0.35.0"
 
 hoist-non-react-statics@^3.3.0:
   version "3.3.2"
@@ -5095,28 +5061,10 @@ metro-babel-transformer@0.83.3:
     hermes-parser "0.32.0"
     nullthrows "^1.1.1"
 
-metro-babel-transformer@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-babel-transformer/-/metro-babel-transformer-0.83.6.tgz"
-  integrity sha512-1AnuazBpzY3meRMr04WUw14kRBkV0W3Ez+AA75FAeNpRyWNN5S3M3PHLUbZw7IXq7ZeOzceyRsHStaFrnWd+8w==
-  dependencies:
-    "@babel/core" "^7.25.2"
-    flow-enums-runtime "^0.0.6"
-    hermes-parser "0.35.0"
-    metro-cache-key "0.83.6"
-    nullthrows "^1.1.1"
-
 metro-cache-key@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/metro-cache-key/-/metro-cache-key-0.83.3.tgz"
   integrity sha512-59ZO049jKzSmvBmG/B5bZ6/dztP0ilp0o988nc6dpaDsU05Cl1c/lRf+yx8m9WW/JVgbmfO5MziBU559XjI5Zw==
-  dependencies:
-    flow-enums-runtime "^0.0.6"
-
-metro-cache-key@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-cache-key/-/metro-cache-key-0.83.6.tgz"
-  integrity sha512-5gdK4PVpgNOHi7xCGrgesNP1AuOA2TiPqpcirGXZi4RLLzX1VMowpkgTVtBfpQQCqWoosQF9yrSo9/KDQg1eBg==
   dependencies:
     flow-enums-runtime "^0.0.6"
 
@@ -5130,31 +5078,7 @@ metro-cache@0.83.3:
     https-proxy-agent "^7.0.5"
     metro-core "0.83.3"
 
-metro-cache@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-cache/-/metro-cache-0.83.6.tgz"
-  integrity sha512-DpvZE32feNkqfZkI4Fic7YI/Kw8QP9wdl1rC4YKPrA77wQbI9vXbxjmfkCT/EGwBTFOPKqvIXo+H3BNe93YyiQ==
-  dependencies:
-    exponential-backoff "^3.1.1"
-    flow-enums-runtime "^0.0.6"
-    https-proxy-agent "^7.0.5"
-    metro-core "0.83.6"
-
-metro-config@^0.83.1:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-config/-/metro-config-0.83.6.tgz"
-  integrity sha512-G5622400uNtnAMlppEA5zkFAZltEf7DSGhOu09BkisCxOlVMWfdosD/oPyh4f2YVQsc1MBYyp4w6OzbExTYarg==
-  dependencies:
-    connect "^3.6.5"
-    flow-enums-runtime "^0.0.6"
-    jest-validate "^29.7.0"
-    metro "0.83.6"
-    metro-cache "0.83.6"
-    metro-core "0.83.6"
-    metro-runtime "0.83.6"
-    yaml "^2.6.1"
-
-metro-config@0.83.3:
+metro-config@^0.83.1, metro-config@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/metro-config/-/metro-config-0.83.3.tgz"
   integrity sha512-mTel7ipT0yNjKILIan04bkJkuCzUUkm2SeEaTads8VfEecCh+ltXchdq6DovXJqzQAXuR2P9cxZB47Lg4klriA==
@@ -5168,30 +5092,7 @@ metro-config@0.83.3:
     metro-runtime "0.83.3"
     yaml "^2.6.1"
 
-metro-config@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-config/-/metro-config-0.83.6.tgz"
-  integrity sha512-G5622400uNtnAMlppEA5zkFAZltEf7DSGhOu09BkisCxOlVMWfdosD/oPyh4f2YVQsc1MBYyp4w6OzbExTYarg==
-  dependencies:
-    connect "^3.6.5"
-    flow-enums-runtime "^0.0.6"
-    jest-validate "^29.7.0"
-    metro "0.83.6"
-    metro-cache "0.83.6"
-    metro-core "0.83.6"
-    metro-runtime "0.83.6"
-    yaml "^2.6.1"
-
-metro-core@^0.83.1, metro-core@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-core/-/metro-core-0.83.6.tgz"
-  integrity sha512-l+yQ2fuIgR//wszUlMrrAa9+Z+kbKazd0QOh0VQY7jC4ghb7yZBBSla/UMYRBZZ6fPg9IM+wD3+h+37a5f9etw==
-  dependencies:
-    flow-enums-runtime "^0.0.6"
-    lodash.throttle "^4.1.1"
-    metro-resolver "0.83.6"
-
-metro-core@0.83.3:
+metro-core@^0.83.1, metro-core@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/metro-core/-/metro-core-0.83.3.tgz"
   integrity sha512-M+X59lm7oBmJZamc96usuF1kusd5YimqG/q97g4Ac7slnJ3YiGglW5CsOlicTR5EWf8MQFxxjDoB6ytTqRe8Hw==
@@ -5215,33 +5116,10 @@ metro-file-map@0.83.3:
     nullthrows "^1.1.1"
     walker "^1.0.7"
 
-metro-file-map@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-file-map/-/metro-file-map-0.83.6.tgz"
-  integrity sha512-Jg3oN604C7GWbQwFAUXt8KsbMXeKfsxbZ5HFy4XFM3ggTS+ja9QgUmq9B613kgXv3G4M6rwiI6cvh9TRly4x3w==
-  dependencies:
-    debug "^4.4.0"
-    fb-watchman "^2.0.0"
-    flow-enums-runtime "^0.0.6"
-    graceful-fs "^4.2.4"
-    invariant "^2.2.4"
-    jest-worker "^29.7.0"
-    micromatch "^4.0.4"
-    nullthrows "^1.1.1"
-    walker "^1.0.7"
-
 metro-minify-terser@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/metro-minify-terser/-/metro-minify-terser-0.83.3.tgz"
   integrity sha512-O2BmfWj6FSfzBLrNCXt/rr2VYZdX5i6444QJU0fFoc7Ljg+Q+iqebwE3K0eTvkI6TRjELsXk1cjU+fXwAR4OjQ==
-  dependencies:
-    flow-enums-runtime "^0.0.6"
-    terser "^5.15.0"
-
-metro-minify-terser@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-minify-terser/-/metro-minify-terser-0.83.6.tgz"
-  integrity sha512-Vx3/Ne9Q+EIEDLfKzZUOtn/rxSNa/QjlYxc42nvK4Mg8mB6XUgd3LXX5ZZVq7lzQgehgEqLrbgShJPGfeF8PnQ==
   dependencies:
     flow-enums-runtime "^0.0.6"
     terser "^5.15.0"
@@ -5253,22 +5131,7 @@ metro-resolver@0.83.3:
   dependencies:
     flow-enums-runtime "^0.0.6"
 
-metro-resolver@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-resolver/-/metro-resolver-0.83.6.tgz"
-  integrity sha512-lAwR/FsT1uJ5iCt4AIsN3boKfJ88aN8bjvDT5FwBS0tKeKw4/sbdSTWlFxc7W/MUTN5RekJ3nQkJRIWsvs28tA==
-  dependencies:
-    flow-enums-runtime "^0.0.6"
-
-metro-runtime@^0.83.1:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-runtime/-/metro-runtime-0.83.6.tgz"
-  integrity sha512-WQPua1G2VgYbwRn6vSKxOhTX7CFbSf/JdUu6Nd8bZnPXckOf7HQ2y51NXNQHoEsiuawathrkzL8pBhv+zgZFmg==
-  dependencies:
-    "@babel/runtime" "^7.25.0"
-    flow-enums-runtime "^0.0.6"
-
-metro-runtime@0.83.3:
+metro-runtime@^0.83.1, metro-runtime@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/metro-runtime/-/metro-runtime-0.83.3.tgz"
   integrity sha512-JHCJb9ebr9rfJ+LcssFYA2x1qPYuSD/bbePupIGhpMrsla7RCwC/VL3yJ9cSU+nUhU4c9Ixxy8tBta+JbDeZWw==
@@ -5276,30 +5139,7 @@ metro-runtime@0.83.3:
     "@babel/runtime" "^7.25.0"
     flow-enums-runtime "^0.0.6"
 
-metro-runtime@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-runtime/-/metro-runtime-0.83.6.tgz"
-  integrity sha512-WQPua1G2VgYbwRn6vSKxOhTX7CFbSf/JdUu6Nd8bZnPXckOf7HQ2y51NXNQHoEsiuawathrkzL8pBhv+zgZFmg==
-  dependencies:
-    "@babel/runtime" "^7.25.0"
-    flow-enums-runtime "^0.0.6"
-
-metro-source-map@^0.83.1, metro-source-map@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-source-map/-/metro-source-map-0.83.6.tgz"
-  integrity sha512-AqJbOMMpeyyM4iNI91pchqDIszzNuuHApEhg6OABqZ+9mjLEqzcIEQ/fboZ7x74fNU5DBd2K36FdUQYPqlGClA==
-  dependencies:
-    "@babel/traverse" "^7.29.0"
-    "@babel/types" "^7.29.0"
-    flow-enums-runtime "^0.0.6"
-    invariant "^2.2.4"
-    metro-symbolicate "0.83.6"
-    nullthrows "^1.1.1"
-    ob1 "0.83.6"
-    source-map "^0.5.6"
-    vlq "^1.0.0"
-
-metro-source-map@0.83.3:
+metro-source-map@^0.83.1, metro-source-map@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/metro-source-map/-/metro-source-map-0.83.3.tgz"
   integrity sha512-xkC3qwUBh2psVZgVavo8+r2C9Igkk3DibiOXSAht1aYRRcztEZNFtAMtfSB7sdO2iFMx2Mlyu++cBxz/fhdzQg==
@@ -5327,18 +5167,6 @@ metro-symbolicate@0.83.3:
     source-map "^0.5.6"
     vlq "^1.0.0"
 
-metro-symbolicate@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-symbolicate/-/metro-symbolicate-0.83.6.tgz"
-  integrity sha512-4nvkmv9T7ozhprlPwk/+xm0SVPsxly5kYyMHdNaOlFemFz4df9BanvD46Ac6OISu/4Idinzfk2KVb++6OfzPAQ==
-  dependencies:
-    flow-enums-runtime "^0.0.6"
-    invariant "^2.2.4"
-    metro-source-map "0.83.6"
-    nullthrows "^1.1.1"
-    source-map "^0.5.6"
-    vlq "^1.0.0"
-
 metro-transform-plugins@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/metro-transform-plugins/-/metro-transform-plugins-0.83.3.tgz"
@@ -5348,18 +5176,6 @@ metro-transform-plugins@0.83.3:
     "@babel/generator" "^7.25.0"
     "@babel/template" "^7.25.0"
     "@babel/traverse" "^7.25.3"
-    flow-enums-runtime "^0.0.6"
-    nullthrows "^1.1.1"
-
-metro-transform-plugins@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-transform-plugins/-/metro-transform-plugins-0.83.6.tgz"
-  integrity sha512-V+zoY2Ul0v0BW6IokJkTud3raXmDdbdwkUQ/5eiSoy0jKuKMhrDjdH+H5buCS5iiJdNbykOn69Eip+Sqymkodg==
-  dependencies:
-    "@babel/core" "^7.25.2"
-    "@babel/generator" "^7.29.1"
-    "@babel/template" "^7.28.6"
-    "@babel/traverse" "^7.29.0"
     flow-enums-runtime "^0.0.6"
     nullthrows "^1.1.1"
 
@@ -5382,72 +5198,7 @@ metro-transform-worker@0.83.3:
     metro-transform-plugins "0.83.3"
     nullthrows "^1.1.1"
 
-metro-transform-worker@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro-transform-worker/-/metro-transform-worker-0.83.6.tgz"
-  integrity sha512-G5kDJ/P0ZTIf57t3iyAd5qIXbj2Wb1j7WtIDh82uTFQHe2Mq2SO9aXG9j1wI+kxZlIe58Z22XEXIKMl89z0ibQ==
-  dependencies:
-    "@babel/core" "^7.25.2"
-    "@babel/generator" "^7.29.1"
-    "@babel/parser" "^7.29.0"
-    "@babel/types" "^7.29.0"
-    flow-enums-runtime "^0.0.6"
-    metro "0.83.6"
-    metro-babel-transformer "0.83.6"
-    metro-cache "0.83.6"
-    metro-cache-key "0.83.6"
-    metro-minify-terser "0.83.6"
-    metro-source-map "0.83.6"
-    metro-transform-plugins "0.83.6"
-    nullthrows "^1.1.1"
-
-metro@^0.83.1, metro@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/metro/-/metro-0.83.6.tgz"
-  integrity sha512-pbdndsAZ2F/ceopDdhVbttpa/hfLzXPJ/husc+QvQ33R0D9UXJKzTn5+OzOXx4bpQNtAKF2bY88cCI3Zl44xDQ==
-  dependencies:
-    "@babel/code-frame" "^7.29.0"
-    "@babel/core" "^7.25.2"
-    "@babel/generator" "^7.29.1"
-    "@babel/parser" "^7.29.0"
-    "@babel/template" "^7.28.6"
-    "@babel/traverse" "^7.29.0"
-    "@babel/types" "^7.29.0"
-    accepts "^2.0.0"
-    chalk "^4.0.0"
-    ci-info "^2.0.0"
-    connect "^3.6.5"
-    debug "^4.4.0"
-    error-stack-parser "^2.0.6"
-    flow-enums-runtime "^0.0.6"
-    graceful-fs "^4.2.4"
-    hermes-parser "0.35.0"
-    image-size "^1.0.2"
-    invariant "^2.2.4"
-    jest-worker "^29.7.0"
-    jsc-safe-url "^0.2.2"
-    lodash.throttle "^4.1.1"
-    metro-babel-transformer "0.83.6"
-    metro-cache "0.83.6"
-    metro-cache-key "0.83.6"
-    metro-config "0.83.6"
-    metro-core "0.83.6"
-    metro-file-map "0.83.6"
-    metro-resolver "0.83.6"
-    metro-runtime "0.83.6"
-    metro-source-map "0.83.6"
-    metro-symbolicate "0.83.6"
-    metro-transform-plugins "0.83.6"
-    metro-transform-worker "0.83.6"
-    mime-types "^3.0.1"
-    nullthrows "^1.1.1"
-    serialize-error "^2.1.0"
-    source-map "^0.5.6"
-    throat "^5.0.0"
-    ws "^7.5.10"
-    yargs "^17.6.2"
-
-metro@0.83.3:
+metro@^0.83.1, metro@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/metro/-/metro-0.83.3.tgz"
   integrity sha512-+rP+/GieOzkt97hSJ0MrPOuAH/jpaS21ZDvL9DJ35QYRDlQcwzcvUlGUf79AnQxq/2NPiS/AULhhM4TKutIt8Q==
@@ -5501,12 +5252,7 @@ micromatch@^4.0.4:
     braces "^3.0.3"
     picomatch "^2.3.1"
 
-mime-db@^1.54.0, "mime-db@>= 1.43.0 < 2":
-  version "1.54.0"
-  resolved "https://registry.npmjs.org/mime-db/-/mime-db-1.54.0.tgz"
-  integrity sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==
-
-mime-db@1.52.0:
+"mime-db@>= 1.43.0 < 2", mime-db@1.52.0:
   version "1.52.0"
   resolved "https://registry.npmjs.org/mime-db/-/mime-db-1.52.0.tgz"
   integrity sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==
@@ -5517,13 +5263,6 @@ mime-types@^2.1.27, mime-types@~2.1.34:
   integrity sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==
   dependencies:
     mime-db "1.52.0"
-
-mime-types@^3.0.0, mime-types@^3.0.1:
-  version "3.0.2"
-  resolved "https://registry.npmjs.org/mime-types/-/mime-types-3.0.2.tgz"
-  integrity sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A==
-  dependencies:
-    mime-db "^1.54.0"
 
 mime@1.6.0:
   version "1.6.0"
@@ -5622,11 +5361,6 @@ natural-compare@^1.4.0:
   resolved "https://registry.npmjs.org/natural-compare/-/natural-compare-1.4.0.tgz"
   integrity sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==
 
-negotiator@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/negotiator/-/negotiator-1.0.0.tgz"
-  integrity sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg==
-
 negotiator@~0.6.4:
   version "0.6.4"
   resolved "https://registry.npmjs.org/negotiator/-/negotiator-0.6.4.tgz"
@@ -5710,13 +5444,6 @@ ob1@0.83.3:
   version "0.83.3"
   resolved "https://registry.npmjs.org/ob1/-/ob1-0.83.3.tgz"
   integrity sha512-egUxXCDwoWG06NGCS5s5AdcpnumHKJlfd3HH06P3m9TEMwwScfcY35wpQxbm9oHof+dM/lVH9Rfyu1elTVelSA==
-  dependencies:
-    flow-enums-runtime "^0.0.6"
-
-ob1@0.83.6:
-  version "0.83.6"
-  resolved "https://registry.npmjs.org/ob1/-/ob1-0.83.6.tgz"
-  integrity sha512-m/xZYkwcjo6UqLMrUICEB3iHk7Bjt3RSR7KXMi6Y1MO/kGkPhoRmfUDF6KAan3rLAZ7ABRqnQyKUTwaqZgUV4w==
   dependencies:
     flow-enums-runtime "^0.0.6"
 
@@ -6152,7 +5879,7 @@ react-dom@*, "react-dom@^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom@^1
   dependencies:
     scheduler "^0.26.0"
 
-react-draggable@^4.4.5, react-draggable@^4.5.0:
+react-draggable@^4.4.6, react-draggable@^4.5.0:
   version "4.5.0"
   resolved "https://registry.npmjs.org/react-draggable/-/react-draggable-4.5.0.tgz"
   integrity sha512-VC+HBLEZ0XJxnOxVAZsdRi8rD04Iz3SiiKOoYzamjylUcju/hP9np/aZdLHf/7WOD268WMoNJMvYfB5yAK45cw==
@@ -6170,32 +5897,37 @@ react-freeze@^1.0.0:
   resolved "https://registry.npmjs.org/react-freeze/-/react-freeze-1.0.4.tgz"
   integrity sha512-r4F0Sec0BLxWicc7HEyo2x3/2icUTrRmDjaaRyzzn+7aDyFZliszMDOgLVwSnQnYENOlL1o569Ze2HZefk8clA==
 
-react-grid-layout@^1.4.4:
-  version "1.4.4"
-  resolved "https://registry.npmjs.org/react-grid-layout/-/react-grid-layout-1.4.4.tgz"
-  integrity sha512-7+Lg8E8O8HfOH5FrY80GCIR1SHTn2QnAYKh27/5spoz+OHhMmEhU/14gIkRzJOtympDPaXcVRX/nT1FjmeOUmQ==
+react-grid-layout@^1.5.3:
+  version "1.5.3"
+  resolved "https://registry.npmjs.org/react-grid-layout/-/react-grid-layout-1.5.3.tgz"
+  integrity sha512-KaG6IbjD6fYhagUtIvOzhftXG+ViKZjCjADe86X1KHl7C/dsBN2z0mi14nbvZKTkp0RKiil9RPcJBgq3LnoA8g==
   dependencies:
-    clsx "^2.0.0"
+    clsx "^2.1.1"
     fast-equals "^4.0.3"
     prop-types "^15.8.1"
-    react-draggable "^4.4.5"
+    react-draggable "^4.4.6"
     react-resizable "^3.0.5"
     resize-observer-polyfill "^1.5.1"
 
-react-is@^16.13.1, react-is@^16.7.0, "react-is@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0":
+react-is@^16.13.1:
   version "16.13.1"
   resolved "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
+
+react-is@^16.7.0:
+  version "16.13.1"
+  resolved "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz"
+  integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
+
+"react-is@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", react-is@^19.1.0:
+  version "19.1.0"
+  resolved "https://registry.npmjs.org/react-is/-/react-is-19.1.0.tgz"
+  integrity sha512-Oe56aUPnkHyyDxxkvqtd7KkdQP5uIUfHxd5XTb3wE9d/kRnZLmKbDB0GWk919tdQ+mxxPtG6EAs6RMT6i1qtHg==
 
 react-is@^18.0.0:
   version "18.3.1"
   resolved "https://registry.npmjs.org/react-is/-/react-is-18.3.1.tgz"
   integrity sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==
-
-react-is@^19.1.0:
-  version "19.2.5"
-  resolved "https://registry.npmjs.org/react-is/-/react-is-19.2.5.tgz"
-  integrity sha512-Dn0t8IQhCmeIT3wu+Apm1/YVsJXsGWi6k4sPdnBIdqMVtHtv0IGi6dcpNpNkNac0zB2uUAqNX3MHzN8c+z2rwQ==
 
 react-native-chart-kit@^6.12.2:
   version "6.12.2"
@@ -6549,7 +6281,7 @@ resolve.exports@^2.0.3:
   resolved "https://registry.npmjs.org/resolve.exports/-/resolve.exports-2.0.3.tgz"
   integrity sha512-OcXjMsGdhL4XnbShKpAcSqPMzQoYkYyhbEaeSko47MjRP9NfEQMhZkXL1DoFlt9LWQn4YttrdnV6X2OiyzBi+A==
 
-resolve@^1.22.11, resolve@^1.22.2:
+resolve@^1.22.11:
   version "1.22.12"
   resolved "https://registry.npmjs.org/resolve/-/resolve-1.22.12.tgz"
   integrity sha512-TyeJ1zif53BPfHootBGwPRYT1RUt6oGWsaQr8UyZW/eAm9bKoijtvruSDEmZHm92CwS9nj7/fWttqPCgzep8CA==
@@ -6559,19 +6291,17 @@ resolve@^1.22.11, resolve@^1.22.2:
     path-parse "^1.0.7"
     supports-preserve-symlinks-flag "^1.0.0"
 
-resolve@^2.0.0-next.5:
-  version "2.0.0-next.6"
-  resolved "https://registry.npmjs.org/resolve/-/resolve-2.0.0-next.6.tgz"
-  integrity sha512-3JmVl5hMGtJ3kMmB3zi3DL25KfkCEyy3Tw7Gmw7z5w8M9WlwoPFnIvwChzu1+cF3iaK3sp18hhPz8ANeimdJfA==
+resolve@^1.22.2:
+  version "1.22.12"
+  resolved "https://registry.npmjs.org/resolve/-/resolve-1.22.12.tgz"
+  integrity sha512-TyeJ1zif53BPfHootBGwPRYT1RUt6oGWsaQr8UyZW/eAm9bKoijtvruSDEmZHm92CwS9nj7/fWttqPCgzep8CA==
   dependencies:
     es-errors "^1.3.0"
     is-core-module "^2.16.1"
-    node-exports-info "^1.6.0"
-    object-keys "^1.1.1"
     path-parse "^1.0.7"
     supports-preserve-symlinks-flag "^1.0.0"
 
-resolve@^2.0.0-next.6:
+resolve@^2.0.0-next.5, resolve@^2.0.0-next.6:
   version "2.0.0-next.6"
   resolved "https://registry.npmjs.org/resolve/-/resolve-2.0.0-next.6.tgz"
   integrity sha512-3JmVl5hMGtJ3kMmB3zi3DL25KfkCEyy3Tw7Gmw7z5w8M9WlwoPFnIvwChzu1+cF3iaK3sp18hhPz8ANeimdJfA==
@@ -6660,17 +6390,42 @@ scheduler@^0.26.0, scheduler@0.26.0:
   resolved "https://registry.npmjs.org/scheduler/-/scheduler-0.26.0.tgz"
   integrity sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA==
 
-semver@^6.3.0:
+semver@^6.3.0, semver@^6.3.1:
   version "6.3.1"
   resolved "https://registry.npmjs.org/semver/-/semver-6.3.1.tgz"
   integrity sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==
 
-semver@^6.3.1:
-  version "6.3.1"
-  resolved "https://registry.npmjs.org/semver/-/semver-6.3.1.tgz"
-  integrity sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==
+semver@^7.1.3:
+  version "7.7.4"
+  resolved "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz"
+  integrity sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==
 
-semver@^7.1.3, semver@^7.3.5, semver@^7.5.4, semver@^7.6.0, semver@^7.7.1, semver@^7.7.2, semver@^7.7.3:
+semver@^7.3.5:
+  version "7.7.4"
+  resolved "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz"
+  integrity sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==
+
+semver@^7.5.4:
+  version "7.7.4"
+  resolved "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz"
+  integrity sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==
+
+semver@^7.6.0:
+  version "7.7.4"
+  resolved "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz"
+  integrity sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==
+
+semver@^7.7.1:
+  version "7.7.4"
+  resolved "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz"
+  integrity sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==
+
+semver@^7.7.2:
+  version "7.7.4"
+  resolved "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz"
+  integrity sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==
+
+semver@^7.7.3:
   version "7.7.4"
   resolved "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz"
   integrity sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==
@@ -7320,11 +7075,6 @@ undici-types@~6.21.0:
   version "6.21.0"
   resolved "https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz"
   integrity sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==
-
-undici-types@~7.19.0:
-  version "7.19.2"
-  resolved "https://registry.npmjs.org/undici-types/-/undici-types-7.19.2.tgz"
-  integrity sha512-qYVnV5OEm2AW8cJMCpdV20CDyaN3g0AjDlOGf1OW4iaDEx8MwdtChUp4zu4H0VP3nDRF/8RKWH+IPp9uW0YGZg==
 
 undici@^6.18.2:
   version "6.25.0"

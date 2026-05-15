@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -86,14 +86,14 @@ const fallbackFields = [
   { name: "Revenue" },
 ];
 
-const visualButtons: Array<{
+const visualButtons: {
   icon: string;
   label: string;
   type: WidgetType;
-}> = [
-  { icon: "▥", label: "Bar", type: "bar" },
-  { icon: "⌁", label: "Line", type: "line" },
-  { icon: "◔", label: "Pie", type: "pie" },
+}[] = [
+  { icon: "BAR", label: "Bar", type: "bar" },
+  { icon: "LIN", label: "Line", type: "line" },
+  { icon: "PIE", label: "Pie", type: "pie" },
   { icon: "123", label: "KPI", type: "kpi" },
 ];
 
@@ -148,17 +148,12 @@ export default function DashboardBuilder() {
   const [selectedDataset, setSelectedDataset] = useState<any>(null);
   const [dashboardName, setDashboardName] = useState("My Dashboard");
 
-  const selectedFields = useMemo(() => {
-    return selectedDataset?.columns?.length ? selectedDataset.columns : fallbackFields;
-  }, [selectedDataset]);
+  const selectedFields = useMemo(
+    () => (selectedDataset?.columns?.length ? selectedDataset.columns : fallbackFields),
+    [selectedDataset]
+  );
 
-  useEffect(() => {
-    if (token) {
-      loadDatasets();
-    }
-  }, [token]);
-
-  const loadDatasets = async () => {
+  const loadDatasets = useCallback(async () => {
     try {
       if (!token) return;
 
@@ -169,10 +164,16 @@ export default function DashboardBuilder() {
       if (data?.length > 0) {
         setSelectedDataset(data[0]);
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Failed to load datasets");
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      loadDatasets();
+    }
+  }, [loadDatasets, token]);
 
   const createLayout = (type: WidgetType, index: number) => ({
     x: (index * 3) % 12,
