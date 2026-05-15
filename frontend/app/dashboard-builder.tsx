@@ -34,6 +34,16 @@ import { apiCall } from "../utils/api";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
+const WEB_GRID_STAGE_STYLE: React.CSSProperties = {
+  width: 960,
+  minHeight: 700,
+};
+
+const WEB_GRID_ITEM_STYLE: React.CSSProperties = {
+  height: "100%",
+  cursor: "move",
+};
+
 interface Widget {
   id: string;
   type: "kpi" | "bar" | "line" | "pie";
@@ -58,7 +68,7 @@ const sampleData = [
 
 export default function DashboardBuilder() {
   const { token } = useAuthStore();
-  
+
   const [widgets, setWidgets] = useState<Widget[]>([
     {
       id: "kpi1",
@@ -120,8 +130,8 @@ export default function DashboardBuilder() {
       },
     ]);
   };
-  
-   const addSpecificChart = (type: "bar" | "line" | "pie") => {
+
+  const addSpecificChart = (type: "bar" | "line" | "pie") => {
     setWidgets((prev) => [
       ...prev,
       {
@@ -191,8 +201,8 @@ export default function DashboardBuilder() {
         </ResponsiveContainer>
       );
     }
-	
-	return (
+
+    return (
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie data={getChartData()} dataKey="value" outerRadius={100}>
@@ -237,12 +247,14 @@ export default function DashboardBuilder() {
 
         <Text style={styles.widgetTitle}>Sales by Category</Text>
 
-<View style={styles.chartMeta}>
+        <View style={styles.chartMeta}>
           <Text style={styles.metaText}>X: Auto</Text>
           <Text style={styles.metaText}>Metric: Auto</Text>
         </View>
 
-        <View style={styles.chartArea}>{renderChart(widget.type)}</View>
+        <View pointerEvents="none" style={styles.chartArea}>
+          {renderChart(widget.type)}
+        </View>
       </View>
     );
   };
@@ -298,7 +310,7 @@ export default function DashboardBuilder() {
             <Text style={styles.buttonText}>Save Dashboard</Text>
           </TouchableOpacity>
 
-<TouchableOpacity style={styles.button} onPress={addKpi}>
+          <TouchableOpacity style={styles.button} onPress={addKpi}>
             <Text style={styles.buttonText}>Add KPI</Text>
           </TouchableOpacity>
 
@@ -328,7 +340,7 @@ export default function DashboardBuilder() {
           <View style={styles.dashboardSurface}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <ScrollView showsVerticalScrollIndicator={false}>
-                <div style={styles.webGridStage as React.CSSProperties}>
+                <div style={WEB_GRID_STAGE_STYLE}>
                   <ResponsiveGridLayout
                     className="layout"
                     layouts={{
@@ -357,18 +369,14 @@ export default function DashboardBuilder() {
                     verticalCompact={false}
                     margin={[12, 12]}
                     containerPadding={[0, 0]}
-                    draggableHandle=".dragHandle"
                     preventCollision={false}
                     isResizable
                     isDraggable
                     resizeHandles={["se"]}
                     onLayoutChange={onLayoutChange}
                   >
-				   {widgets.map((widget, index) => (
-                      <div
-                        key={widget.id}
-                        style={styles.webGridItem as React.CSSProperties}
-                      >
+                    {widgets.map((widget, index) => (
+                      <div key={widget.id} style={WEB_GRID_ITEM_STYLE}>
                         {renderWidget(widget, index)}
                       </div>
                     ))}
@@ -453,15 +461,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
     overflow: "hidden",
-  },
-
-  webGridStage: {
-    width: 960,
-    minHeight: 700,
-  },
-
-  webGridItem: {
-    height: "100%",
   },
 
   rightSidebar: {
