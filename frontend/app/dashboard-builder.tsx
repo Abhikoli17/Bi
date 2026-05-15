@@ -1,34 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
   Alert,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import {
-  ResponsiveContainer,
-  BarChart,
   Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
+  BarChart,
   Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
 } from "recharts";
 
-import {
-  Responsive,
-  WidthProvider,
-  Layout,
-} from "react-grid-layout";
+import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -36,8 +32,7 @@ import "react-resizable/css/styles.css";
 import { useAuthStore } from "../stores/authStore";
 import { apiCall } from "../utils/api";
 
-const ResponsiveGridLayout =
-  WidthProvider(Responsive);
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface Widget {
   id: string;
@@ -50,88 +45,41 @@ interface Widget {
   };
 }
 
+const sampleData = [
+  { name: "2025-01-01", value: 13 },
+  { name: "2025-01-02", value: 4 },
+  { name: "2025-01-03", value: 1 },
+  { name: "2025-01-04", value: 10 },
+  { name: "2025-01-05", value: 19 },
+  { name: "2025-01-06", value: 14 },
+  { name: "2025-01-07", value: 6 },
+  { name: "2025-01-08", value: 14 },
+];
+
 export default function DashboardBuilder() {
   const { token } = useAuthStore();
-
-  const [widgets, setWidgets] = useState<
-    Widget[]
-  >([
+  
+  const [widgets, setWidgets] = useState<Widget[]>([
     {
       id: "kpi1",
       type: "kpi",
-      layout: {
-        x: 0,
-        y: 0,
-        w: 2,
-        h: 2,
-      },
+      layout: { x: 0, y: 0, w: 2, h: 2 },
     },
     {
       id: "line1",
       type: "line",
-      layout: {
-        x: 2,
-        y: 0,
-        w: 6,
-        h: 3,
-      },
+      layout: { x: 2, y: 0, w: 6, h: 3 },
     },
     {
       id: "bar1",
       type: "bar",
-      layout: {
-        x: 0,
-        y: 3,
-        w: 6,
-        h: 5,
-      },
+      layout: { x: 0, y: 3, w: 6, h: 5 },
     },
   ]);
 
-  const [datasets, setDatasets] = useState<
-    any[]
-  >([]);
-
-  const [selectedDataset, setSelectedDataset] =
-    useState<any>(null);
-
-  const [dashboardName, setDashboardName] =
-    useState("My Dashboard");
-
-  const sampleData = [
-    {
-      name: "2025-01-01",
-      value: 13,
-    },
-    {
-      name: "2025-01-02",
-      value: 4,
-    },
-    {
-      name: "2025-01-03",
-      value: 1,
-    },
-    {
-      name: "2025-01-04",
-      value: 10,
-    },
-    {
-      name: "2025-01-05",
-      value: 19,
-    },
-    {
-      name: "2025-01-06",
-      value: 14,
-    },
-    {
-      name: "2025-01-07",
-      value: 6,
-    },
-    {
-      name: "2025-01-08",
-      value: 14,
-    },
-  ];
+  const [datasets, setDatasets] = useState<any[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<any>(null);
+  const [dashboardName, setDashboardName] = useState("My Dashboard");
 
   useEffect(() => {
     if (token) {
@@ -143,11 +91,7 @@ export default function DashboardBuilder() {
     try {
       if (!token) return;
 
-      const data = await apiCall(
-        "/api/datasets",
-        {},
-        token
-      );
+      const data = await apiCall("/api/datasets", {}, token);
 
       setDatasets(data);
 
@@ -159,17 +103,12 @@ export default function DashboardBuilder() {
     }
   };
 
-  const createLayout = (
-    type: string,
-    index: number
-  ) => {
-    return {
-      x: (index * 2) % 12,
-      y: Infinity,
-      w: type === "kpi" ? 2 : 4,
-      h: type === "kpi" ? 2 : 5,
-    };
-  };
+  const createLayout = (type: Widget["type"], index: number) => ({
+    x: (index * 2) % 12,
+    y: Infinity,
+    w: type === "kpi" ? 2 : 4,
+    h: type === "kpi" ? 2 : 5,
+  });
 
   const addKpi = () => {
     setWidgets((prev) => [
@@ -177,38 +116,26 @@ export default function DashboardBuilder() {
       {
         id: `kpi-${Date.now()}`,
         type: "kpi",
-        layout: createLayout(
-          "kpi",
-          prev.length
-        ),
+        layout: createLayout("kpi", prev.length),
       },
     ]);
   };
-
-  const addSpecificChart = (
-    type: "bar" | "line" | "pie"
-  ) => {
+  
+   const addSpecificChart = (type: "bar" | "line" | "pie") => {
     setWidgets((prev) => [
       ...prev,
       {
         id: `${type}-${Date.now()}`,
         type,
-        layout: createLayout(
-          type,
-          prev.length
-        ),
+        layout: createLayout(type, prev.length),
       },
     ]);
   };
 
-  const onLayoutChange = (
-    currentLayout: Layout[]
-  ) => {
+  const onLayoutChange = (currentLayout: Layout[]) => {
     setWidgets((prev) =>
       prev.map((widget) => {
-        const item = currentLayout.find(
-          (l) => l.i === widget.id
-        );
+        const item = currentLayout.find((layout) => layout.i === widget.id);
 
         if (!item) return widget;
 
@@ -225,48 +152,23 @@ export default function DashboardBuilder() {
     );
   };
 
-  const getChartData = () => {
-    return sampleData;
-  };
+  const getChartData = () => sampleData;
 
-  const getKpiData = (index: number) => {
-    return {
-      title:
-        index === 0
-          ? "Total Quantity"
-          : "Total Revenue",
+  const getKpiData = (index: number) => ({
+    title: index === 0 ? "Total Quantity" : "Total Revenue",
+    value: index === 0 ? "1,042" : "₹8,615",
+    growth: "Live",
+  });
 
-      value:
-        index === 0 ? "1,042" : "₹8,615",
-
-      growth: "Live",
-    };
-  };
-
-  const renderChart = (
-    type: string
-  ) => {
+  const renderChart = (type: Widget["type"]) => {
     if (type === "bar") {
       return (
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
-        >
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart data={getChartData()}>
-            <XAxis
-              dataKey="name"
-              stroke="#94a3b8"
-            />
-
+            <XAxis dataKey="name" stroke="#94a3b8" />
             <YAxis stroke="#94a3b8" />
-
             <Tooltip />
-
-            <Bar
-              dataKey="value"
-              fill="#3b82f6"
-              radius={[8, 8, 0, 0]}
-            />
+            <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -274,20 +176,11 @@ export default function DashboardBuilder() {
 
     if (type === "line") {
       return (
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
-        >
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={getChartData()}>
-            <XAxis
-              dataKey="name"
-              stroke="#94a3b8"
-            />
-
+            <XAxis dataKey="name" stroke="#94a3b8" />
             <YAxis stroke="#94a3b8" />
-
             <Tooltip />
-
             <Line
               type="monotone"
               dataKey="value"
@@ -298,153 +191,85 @@ export default function DashboardBuilder() {
         </ResponsiveContainer>
       );
     }
-
-    return (
-      <ResponsiveContainer
-        width="100%"
-        height="100%"
-      >
+	
+	return (
+      <ResponsiveContainer width="100%" height="100%">
         <PieChart>
-          <Pie
-            data={getChartData()}
-            dataKey="value"
-            outerRadius={100}
-          >
-            {getChartData().map(
-              (_, index) => (
-                <Cell
-                  key={index}
-                  fill={
-                    [
-                      "#3b82f6",
-                      "#22c55e",
-                      "#f59e0b",
-                      "#ef4444",
-                    ][index % 4]
-                  }
-                />
-              )
-            )}
+          <Pie data={getChartData()} dataKey="value" outerRadius={100}>
+            {getChartData().map((_, index) => (
+              <Cell
+                key={index}
+                fill={
+                  ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444"][index % 4]
+                }
+              />
+            ))}
           </Pie>
+          <Tooltip />
         </PieChart>
       </ResponsiveContainer>
     );
   };
 
-  const renderWidget = (
-    widget: Widget,
-    index: number
-  ) => {
+  const renderWidget = (widget: Widget, index: number) => {
     if (widget.type === "kpi") {
       const kpi = getKpiData(index);
 
       return (
-        <View
-          style={[
-            styles.widget,
-            styles.kpiWidget,
-          ]}
-        >
+        <View style={[styles.widget, styles.kpiWidget]}>
           <View style={styles.widgetHeader}>
-            <Text style={styles.widgetMenu}>
-              ⚙
-            </Text>
+            <Text style={styles.widgetMenu}>⚙</Text>
           </View>
 
-          <Text style={styles.widgetTitle}>
-            {kpi.title}
-          </Text>
-
-          <Text style={styles.kpiValue}>
-            {kpi.value}
-          </Text>
-
-          <Text style={styles.growth}>
-            {kpi.growth}
-          </Text>
+          <Text style={styles.widgetTitle}>{kpi.title}</Text>
+          <Text style={styles.kpiValue}>{kpi.value}</Text>
+          <Text style={styles.growth}>{kpi.growth}</Text>
         </View>
       );
     }
 
     return (
-      <View
-        style={[
-          styles.widget,
-          styles.chartWidget,
-        ]}
-      >
+      <View style={[styles.widget, styles.chartWidget]}>
         <View style={styles.dragHandle}>
-          <Text style={styles.dragText}>
-            Drag Widget
-          </Text>
-
-          <Text style={styles.widgetMenu}>
-            ⚙
-          </Text>
+          <Text style={styles.dragText}>Drag Widget</Text>
+          <Text style={styles.widgetMenu}>⚙</Text>
         </View>
 
-        <Text style={styles.widgetTitle}>
-          Sales by Category
-        </Text>
+        <Text style={styles.widgetTitle}>Sales by Category</Text>
 
-        <View style={styles.chartMeta}>
-          <Text style={styles.metaText}>
-            X: Auto
-          </Text>
-
-          <Text style={styles.metaText}>
-            Metric: Auto
-          </Text>
+<View style={styles.chartMeta}>
+          <Text style={styles.metaText}>X: Auto</Text>
+          <Text style={styles.metaText}>Metric: Auto</Text>
         </View>
 
-        <View style={{ flex: 1 }}>
-          {renderChart(widget.type)}
-        </View>
+        <View style={styles.chartArea}>{renderChart(widget.type)}</View>
       </View>
     );
   };
 
   return (
     <View style={styles.page}>
-      {/* TOP NAVBAR */}
       <View style={styles.topNavbar}>
-        <Text style={styles.navTitle}>
-          Dashboard Builder
-        </Text>
+        <Text style={styles.navTitle}>Dashboard Builder</Text>
 
         <View style={styles.topButtons}>
-          <TouchableOpacity
-            style={styles.navButton}
-          >
-            <Text style={styles.buttonText}>
-              Insert
-            </Text>
+          <TouchableOpacity style={styles.navButton}>
+            <Text style={styles.buttonText}>Insert</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.navButton}
-          >
-            <Text style={styles.buttonText}>
-              Visual
-            </Text>
+          <TouchableOpacity style={styles.navButton}>
+            <Text style={styles.buttonText}>Visual</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.navButton}
-          >
-            <Text style={styles.buttonText}>
-              Model
-            </Text>
+          <TouchableOpacity style={styles.navButton}>
+            <Text style={styles.buttonText}>Model</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.mainLayout}>
-        {/* LEFT SIDEBAR */}
         <View style={styles.leftSidebar}>
-          <Text style={styles.sidebarTitle}>
-            Datasets
-          </Text>
+          <Text style={styles.sidebarTitle}>Datasets</Text>
 
           <ScrollView>
             {datasets.map((dataset: any) => (
@@ -452,19 +277,11 @@ export default function DashboardBuilder() {
                 key={dataset._id}
                 style={[
                   styles.fieldItem,
-                  selectedDataset?._id ===
-                    dataset._id && {
-                    backgroundColor:
-                      "#2563eb",
-                  },
+                  selectedDataset?._id === dataset._id && styles.selectedItem,
                 ]}
-                onPress={() =>
-                  setSelectedDataset(dataset)
-                }
+                onPress={() => setSelectedDataset(dataset)}
               >
-                <Text style={styles.fieldText}>
-                  {dataset.name}
-                </Text>
+                <Text style={styles.fieldText}>{dataset.name}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -477,147 +294,100 @@ export default function DashboardBuilder() {
             style={styles.nameInput}
           />
 
-          <TouchableOpacity
-            style={styles.saveButton}
-          >
-            <Text style={styles.buttonText}>
-              Save Dashboard
-            </Text>
+          <TouchableOpacity style={styles.saveButton}>
+            <Text style={styles.buttonText}>Save Dashboard</Text>
+          </TouchableOpacity>
+
+<TouchableOpacity style={styles.button} onPress={addKpi}>
+            <Text style={styles.buttonText}>Add KPI</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.button}
-            onPress={addKpi}
+            onPress={() => addSpecificChart("bar")}
           >
-            <Text style={styles.buttonText}>
-              Add KPI
-            </Text>
+            <Text style={styles.buttonText}>Add Bar Chart</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.button}
-            onPress={() =>
-              addSpecificChart("bar")
-            }
+            onPress={() => addSpecificChart("line")}
           >
-            <Text style={styles.buttonText}>
-              Add Bar Chart
-            </Text>
+            <Text style={styles.buttonText}>Add Line Chart</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.button}
-            onPress={() =>
-              addSpecificChart("line")
-            }
+            onPress={() => addSpecificChart("pie")}
           >
-            <Text style={styles.buttonText}>
-              Add Line Chart
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              addSpecificChart("pie")
-            }
-          >
-            <Text style={styles.buttonText}>
-              Add Pie Chart
-            </Text>
+            <Text style={styles.buttonText}>Add Pie Chart</Text>
           </TouchableOpacity>
         </View>
 
-        {/* CENTER DASHBOARD */}
         <View style={styles.centerCanvas}>
           <View style={styles.dashboardSurface}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={
-                false
-              }
-            >
-              <ScrollView
-                showsVerticalScrollIndicator={
-                  false
-                }
-              >
-                <ResponsiveGridLayout
-                  className="layout"
-                  layouts={{
-                    lg: widgets.map(
-                      (widget) => ({
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <div style={styles.webGridStage as React.CSSProperties}>
+                  <ResponsiveGridLayout
+                    className="layout"
+                    layouts={{
+                      lg: widgets.map((widget) => ({
                         i: widget.id,
                         x: widget.layout.x,
                         y: widget.layout.y,
                         w: widget.layout.w,
                         h: widget.layout.h,
-                      })
-                    ),
-                  }}
-                  breakpoints={{
-                    lg: 1200,
-                    md: 996,
-                    sm: 768,
-                    xs: 480,
-                  }}
-                  cols={{
-                    lg: 12,
-                    md: 10,
-                    sm: 6,
-                    xs: 2,
-                  }}
-                  rowHeight={80}
-                  autoSize={true}
-                  verticalCompact={false}
-                  margin={[12, 12]}
-                  containerPadding={[0, 0]}
-                  draggableHandle=".dragHandle"
-                  preventCollision={false}
-                  isResizable={true}
-                  isDraggable={true}
-                  resizeHandles={["se"]}
-                  onLayoutChange={
-                    onLayoutChange
-                  }
-                >
-                  {widgets.map(
-                    (widget, index) => (
-                      <View
+                      })),
+                    }}
+                    breakpoints={{
+                      lg: 1200,
+                      md: 996,
+                      sm: 768,
+                      xs: 480,
+                    }}
+                    cols={{
+                      lg: 12,
+                      md: 10,
+                      sm: 6,
+                      xs: 2,
+                    }}
+                    rowHeight={80}
+                    autoSize
+                    verticalCompact={false}
+                    margin={[12, 12]}
+                    containerPadding={[0, 0]}
+                    draggableHandle=".dragHandle"
+                    preventCollision={false}
+                    isResizable
+                    isDraggable
+                    resizeHandles={["se"]}
+                    onLayoutChange={onLayoutChange}
+                  >
+				   {widgets.map((widget, index) => (
+                      <div
                         key={widget.id}
+                        style={styles.webGridItem as React.CSSProperties}
                       >
-                        {renderWidget(
-                          widget,
-                          index
-                        )}
-                      </View>
-                    )
-                  )}
-                </ResponsiveGridLayout>
+                        {renderWidget(widget, index)}
+                      </div>
+                    ))}
+                  </ResponsiveGridLayout>
+                </div>
               </ScrollView>
             </ScrollView>
           </View>
         </View>
 
-        {/* RIGHT SIDEBAR */}
         <View style={styles.rightSidebar}>
-          <Text style={styles.sidebarTitle}>
-            Fields
-          </Text>
+          <Text style={styles.sidebarTitle}>Fields</Text>
 
           <ScrollView>
-            {selectedDataset?.columns?.map(
-              (col: any) => (
-                <View
-                  key={col.name}
-                  style={styles.fieldItem}
-                >
-                  <Text style={styles.fieldText}>
-                    {col.name}
-                  </Text>
-                </View>
-              )
-            )}
+            {selectedDataset?.columns?.map((col: any) => (
+              <View key={col.name} style={styles.fieldItem}>
+                <Text style={styles.fieldText}>{col.name}</Text>
+              </View>
+            ))}
           </ScrollView>
         </View>
       </View>
@@ -685,6 +455,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
+  webGridStage: {
+    width: 960,
+    minHeight: 700,
+  },
+
+  webGridItem: {
+    height: "100%",
+  },
+
   rightSidebar: {
     width: 180,
     backgroundColor: "#0f172a",
@@ -707,6 +486,11 @@ const styles = StyleSheet.create({
 
   chartWidget: {
     flex: 1,
+  },
+
+  chartArea: {
+    flex: 1,
+    minHeight: 0,
   },
 
   widgetHeader: {
@@ -801,6 +585,10 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     marginBottom: 8,
+  },
+
+  selectedItem: {
+    backgroundColor: "#2563eb",
   },
 
   fieldText: {
