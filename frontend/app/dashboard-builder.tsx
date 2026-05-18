@@ -45,6 +45,8 @@ interface Widget {
   id: string;
   type: WidgetType;
   title: string;
+  xField?: string;
+  valueField?: string;
   layout: {
     x: number;
     y: number;
@@ -56,8 +58,8 @@ interface Widget {
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const REPORT_STAGE_STYLE = {
-  width: 1040,
-  minHeight: 640,
+  width: 1060,
+  minHeight: 540,
 } as any;
 
 const GRID_ITEM_STYLE = {
@@ -86,6 +88,65 @@ const fallbackFields = [
   { name: "Revenue" },
 ];
 
+const teaSalesRows = [
+  { Date: "Jan 01", "Product ID": "T-100", "Customer ID": "C-001", Region: "North", Quantity: 13, "Unit Price": 6, Revenue: 78 },
+  { Date: "Jan 02", "Product ID": "T-101", "Customer ID": "C-002", Region: "South", Quantity: 4, "Unit Price": 8, Revenue: 32 },
+  { Date: "Jan 03", "Product ID": "T-102", "Customer ID": "C-003", Region: "East", Quantity: 1, "Unit Price": 10, Revenue: 10 },
+  { Date: "Jan 04", "Product ID": "T-103", "Customer ID": "C-004", Region: "West", Quantity: 10, "Unit Price": 7, Revenue: 70 },
+  { Date: "Jan 05", "Product ID": "T-104", "Customer ID": "C-005", Region: "North", Quantity: 19, "Unit Price": 9, Revenue: 171 },
+  { Date: "Jan 06", "Product ID": "T-105", "Customer ID": "C-006", Region: "South", Quantity: 14, "Unit Price": 8, Revenue: 112 },
+  { Date: "Jan 07", "Product ID": "T-106", "Customer ID": "C-007", Region: "East", Quantity: 6, "Unit Price": 6, Revenue: 36 },
+  { Date: "Jan 08", "Product ID": "T-107", "Customer ID": "C-008", Region: "West", Quantity: 14, "Unit Price": 7, Revenue: 98 },
+];
+
+const demoDatasets = [
+  {
+    _id: "demo-car-sales",
+    name: "Global Car Sales Data",
+    columns: [
+      { name: "Sale ID" },
+      { name: "Date" },
+      { name: "Make" },
+      { name: "Model" },
+      { name: "Year" },
+      { name: "Country" },
+      { name: "Price_USD" },
+      { name: "Fuel_Type" },
+      { name: "Transmission" },
+      { name: "Color" },
+    ],
+    rows: [
+      { "Sale ID": "S-001", Date: "Jan 01", Make: "Toyota", Model: "Corolla", Year: 2024, Country: "India", Price_USD: 22000, Fuel_Type: "Petrol", Transmission: "Auto", Color: "White" },
+      { "Sale ID": "S-002", Date: "Jan 02", Make: "Honda", Model: "Civic", Year: 2023, Country: "USA", Price_USD: 26500, Fuel_Type: "Petrol", Transmission: "Manual", Color: "Blue" },
+      { "Sale ID": "S-003", Date: "Jan 03", Make: "Tesla", Model: "Model 3", Year: 2025, Country: "USA", Price_USD: 41000, Fuel_Type: "Electric", Transmission: "Auto", Color: "Black" },
+      { "Sale ID": "S-004", Date: "Jan 04", Make: "Hyundai", Model: "Creta", Year: 2024, Country: "India", Price_USD: 18000, Fuel_Type: "Diesel", Transmission: "Auto", Color: "Red" },
+    ],
+  },
+  {
+    _id: "demo-tea-sales",
+    name: "tea_sales_data",
+    columns: fallbackFields,
+    rows: teaSalesRows,
+  },
+  {
+    _id: "demo-spreadsheet",
+    name: "spreadsheet",
+    columns: [
+      { name: "Date" },
+      { name: "Category" },
+      { name: "Sales" },
+      { name: "Profit" },
+      { name: "Region" },
+    ],
+    rows: [
+      { Date: "Jan 01", Category: "Tea", Sales: 120, Profit: 35, Region: "North" },
+      { Date: "Jan 02", Category: "Coffee", Sales: 90, Profit: 24, Region: "South" },
+      { Date: "Jan 03", Category: "Snacks", Sales: 140, Profit: 42, Region: "East" },
+      { Date: "Jan 04", Category: "Tea", Sales: 180, Profit: 58, Region: "West" },
+    ],
+  },
+];
+
 const visualButtons: {
   icon: string;
   label: string;
@@ -98,54 +159,62 @@ const visualButtons: {
 ];
 
 const ribbonGroups = [
-  {
-    title: "Data",
-    items: ["Get data", "Excel", "SQL Server", "Enter data"],
-  },
-  {
-    title: "Queries",
-    items: ["Transform data", "Refresh"],
-  },
-  {
-    title: "Insert",
-    items: ["New visual", "Text box", "More visuals"],
-  },
-  {
-    title: "Calculations",
-    items: ["New measure", "Quick measure"],
-  },
-  {
-    title: "Share",
-    items: ["Publish", "Share"],
-  },
+  { title: "Data", items: ["Get data", "Excel", "SQL Server", "Enter data"] },
+  { title: "Queries", items: ["Transform data", "Refresh"] },
+  { title: "Insert", items: ["New visual", "Text box", "More visuals"] },
+  { title: "Calculations", items: ["New measure", "Quick measure"] },
+  { title: "Share", items: ["Publish", "Share"] },
 ];
+
+const getRibbonInitials = (label: string) =>
+  label
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+const isNumericValue = (value: unknown) =>
+  typeof value === "number" || (!Number.isNaN(Number(value)) && value !== "");
+
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(value);
 
 export default function DashboardBuilder() {
   const { token } = useAuthStore();
+  const [activeTab, setActiveTab] = useState("Home");
+  const [selectedWidgetId, setSelectedWidgetId] = useState("kpi1");
 
   const [widgets, setWidgets] = useState<Widget[]>([
     {
       id: "kpi1",
       type: "kpi",
       title: "Total Quantity",
-      layout: { x: 0, y: 0, w: 3, h: 2 },
+      valueField: "Quantity",
+      layout: { x: 0, y: 0, w: 4, h: 2 },
     },
     {
       id: "line1",
       type: "line",
       title: "Sales Trend",
-      layout: { x: 3, y: 0, w: 5, h: 3 },
+      xField: "Date",
+      valueField: "Revenue",
+      layout: { x: 4, y: 0, w: 6, h: 3 },
     },
     {
       id: "bar1",
       type: "bar",
       title: "Sales by Category",
-      layout: { x: 0, y: 3, w: 5, h: 4 },
+      xField: "Region",
+      valueField: "Revenue",
+      layout: { x: 0, y: 3, w: 6, h: 3 },
     },
   ]);
 
-  const [datasets, setDatasets] = useState<any[]>([]);
-  const [selectedDataset, setSelectedDataset] = useState<any>(null);
+  const [datasets, setDatasets] = useState<any[]>(demoDatasets);
+  const [selectedDataset, setSelectedDataset] = useState<any>(demoDatasets[0]);
   const [dashboardName, setDashboardName] = useState("My Dashboard");
 
   const selectedFields = useMemo(
@@ -153,19 +222,50 @@ export default function DashboardBuilder() {
     [selectedDataset]
   );
 
+  const selectedWidget = useMemo(
+    () => widgets.find((widget) => widget.id === selectedWidgetId) ?? widgets[0],
+    [selectedWidgetId, widgets]
+  );
+
+  const datasetRows = useMemo(
+    () => (selectedDataset?.rows?.length ? selectedDataset.rows : teaSalesRows),
+    [selectedDataset]
+  );
+
+  const numericFields = useMemo(
+    () =>
+      selectedFields
+        .filter((field: any) =>
+          datasetRows.some((row: any) => isNumericValue(row[field.name]))
+        )
+        .map((field: any) => field.name),
+    [datasetRows, selectedFields]
+  );
+
+  const categoryFields = useMemo(
+    () =>
+      selectedFields
+        .filter((field: any) => !numericFields.includes(field.name))
+        .map((field: any) => field.name),
+    [numericFields, selectedFields]
+  );
+
+  const defaultValueField = numericFields[0] ?? "Revenue";
+  const defaultXField = categoryFields[0] ?? selectedFields[0]?.name ?? "Date";
+
   const loadDatasets = useCallback(async () => {
     try {
       if (!token) return;
 
       const data = await apiCall("/api/datasets", {}, token);
 
-      setDatasets(data);
+      if (!data?.length) return;
 
-      if (data?.length > 0) {
-        setSelectedDataset(data[0]);
-      }
+      setDatasets(data);
+      setSelectedDataset(data[0]);
     } catch {
-      Alert.alert("Failed to load datasets");
+      setDatasets(demoDatasets);
+      setSelectedDataset(demoDatasets[0]);
     }
   }, [token]);
 
@@ -189,16 +289,139 @@ export default function DashboardBuilder() {
       line: "Line Chart",
       pie: "Pie Chart",
     };
+    const id = `${type}-${Date.now()}`;
 
     setWidgets((prev) => [
       ...prev,
       {
-        id: `${type}-${Date.now()}`,
+        id,
         type,
         title: titles[type],
+        xField: type === "kpi" ? undefined : defaultXField,
+        valueField: defaultValueField,
         layout: createLayout(type, prev.length),
       },
     ]);
+
+    setSelectedWidgetId(id);
+  };
+
+  const changeSelectedVisualType = (type: WidgetType) => {
+    if (!selectedWidget) {
+      addWidget(type);
+      return;
+    }
+
+    const titles: Record<WidgetType, string> = {
+      kpi: "Total Revenue",
+      bar: "Clustered Bar Chart",
+      line: "Line Chart",
+      pie: "Pie Chart",
+    };
+
+    setWidgets((prev) =>
+      prev.map((widget) =>
+        widget.id === selectedWidget.id
+          ? {
+              ...widget,
+              type,
+              title: titles[type],
+              xField: type === "kpi" ? undefined : widget.xField ?? defaultXField,
+              valueField: widget.valueField ?? defaultValueField,
+            }
+          : widget
+      )
+    );
+  };
+
+  const duplicateSelectedVisual = () => {
+    if (!selectedWidget) return;
+
+    const id = `${selectedWidget.type}-${Date.now()}`;
+    setWidgets((prev) => [
+      ...prev,
+      {
+        ...selectedWidget,
+        id,
+        title: `${selectedWidget.title} Copy`,
+        layout: {
+          ...selectedWidget.layout,
+          x: Math.min(selectedWidget.layout.x + 1, 8),
+          y: selectedWidget.layout.y + 1,
+        },
+      },
+    ]);
+    setSelectedWidgetId(id);
+  };
+
+  const deleteSelectedVisual = () => {
+    if (!selectedWidget || widgets.length === 1) return;
+
+    setWidgets((prev) => prev.filter((widget) => widget.id !== selectedWidget.id));
+    setSelectedWidgetId(widgets.find((widget) => widget.id !== selectedWidget.id)?.id ?? "");
+  };
+
+  const assignFieldToSelectedVisual = (fieldName: string) => {
+    if (!selectedWidget) return;
+
+    const isNumeric = numericFields.includes(fieldName);
+
+    setWidgets((prev) =>
+      prev.map((widget) => {
+        if (widget.id !== selectedWidget.id) return widget;
+
+        if (widget.type === "kpi") {
+          return {
+            ...widget,
+            valueField: isNumeric ? fieldName : widget.valueField ?? defaultValueField,
+            title: isNumeric ? `Total ${fieldName}` : widget.title,
+          };
+        }
+
+        return {
+          ...widget,
+          xField: isNumeric ? widget.xField ?? defaultXField : fieldName,
+          valueField: isNumeric ? fieldName : widget.valueField ?? defaultValueField,
+          title: isNumeric ? `${fieldName} by ${widget.xField ?? defaultXField}` : widget.title,
+        };
+      })
+    );
+  };
+
+  const saveDashboard = () => {
+    Alert.alert(
+      "Dashboard saved",
+      `${dashboardName || "Untitled dashboard"} has ${widgets.length} visual${
+        widgets.length === 1 ? "" : "s"
+      }.`
+    );
+  };
+
+  const resetDemoData = () => {
+    setDatasets(demoDatasets);
+    setSelectedDataset(demoDatasets[0]);
+    Alert.alert("Demo data loaded", "The sample datasets are ready to use.");
+  };
+
+  const handleRibbonAction = (item: string) => {
+    const actions: Record<string, () => void> = {
+      "Get data": resetDemoData,
+      Excel: resetDemoData,
+      "SQL Server": resetDemoData,
+      "Enter data": resetDemoData,
+      "Transform data": () =>
+        Alert.alert("Transform data", "Demo mode: fields are ready in the Data pane."),
+      Refresh: loadDatasets,
+      "New visual": () => addWidget("bar"),
+      "Text box": () => addWidget("kpi"),
+      "More visuals": () => addWidget("pie"),
+      "New measure": () => addWidget("kpi"),
+      "Quick measure": () => addWidget("line"),
+      Publish: saveDashboard,
+      Share: saveDashboard,
+    };
+
+    actions[item]?.();
   };
 
   const onLayoutChange = (currentLayout: Layout[]) => {
@@ -221,17 +444,55 @@ export default function DashboardBuilder() {
     );
   };
 
-  const getKpiData = (index: number) => ({
-    title: index === 0 ? "Total Quantity" : "Total Revenue",
-    value: index === 0 ? "1,042" : "INR 8,615",
-    growth: "Live",
-  });
+  const getVisualData = (widget: Widget) => {
+    const fieldNames = selectedFields.map((field: any) => field.name);
+    const xField =
+      widget.xField && fieldNames.includes(widget.xField) ? widget.xField : defaultXField;
+    const valueField =
+      widget.valueField && fieldNames.includes(widget.valueField)
+        ? widget.valueField
+        : defaultValueField;
 
-  const renderChart = (type: WidgetType) => {
-    if (type === "bar") {
+    if (!xField || !valueField) return sampleData;
+
+    const grouped = datasetRows.reduce((acc: Record<string, number>, row: any) => {
+      const key = String(row[xField] ?? "Blank");
+      const value = Number(row[valueField] ?? 0);
+      acc[key] = (acc[key] ?? 0) + (Number.isNaN(value) ? 0 : value);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([name, value]) => ({
+      name,
+      value,
+    }));
+  };
+
+  const getKpiData = (widget: Widget, index: number) => {
+    const fieldNames = selectedFields.map((field: any) => field.name);
+    const valueField =
+      widget.valueField && fieldNames.includes(widget.valueField)
+        ? widget.valueField
+        : defaultValueField;
+    const total = datasetRows.reduce((sum: number, row: any) => {
+      const value = Number(row[valueField] ?? 0);
+      return sum + (Number.isNaN(value) ? 0 : value);
+    }, 0);
+
+    return {
+      title: widget.title || (index === 0 ? "Total Quantity" : `Total ${valueField}`),
+      value: formatNumber(total),
+      growth: "Live",
+    };
+  };
+
+  const renderChart = (widget: Widget) => {
+    const data = getVisualData(widget);
+
+    if (widget.type === "bar") {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={sampleData}>
+          <BarChart data={data}>
             <XAxis dataKey="name" stroke="#6b7280" fontSize={11} />
             <YAxis stroke="#6b7280" fontSize={11} />
             <Tooltip />
@@ -241,10 +502,10 @@ export default function DashboardBuilder() {
       );
     }
 
-    if (type === "line") {
+    if (widget.type === "line") {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={sampleData}>
+          <LineChart data={data}>
             <XAxis dataKey="name" stroke="#6b7280" fontSize={11} />
             <YAxis stroke="#6b7280" fontSize={11} />
             <Tooltip />
@@ -263,13 +524,8 @@ export default function DashboardBuilder() {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
-          <Pie
-            data={sampleData}
-            dataKey="value"
-            nameKey="name"
-            outerRadius="78%"
-          >
-            {sampleData.map((_, index) => (
+          <Pie data={data} dataKey="value" nameKey="name" outerRadius="78%">
+            {data.map((_, index) => (
               <Cell
                 key={index}
                 fill={
@@ -287,11 +543,13 @@ export default function DashboardBuilder() {
   };
 
   const renderWidget = (widget: Widget, index: number) => {
+    const isSelected = selectedWidget?.id === widget.id;
+
     if (widget.type === "kpi") {
-      const kpi = getKpiData(index);
+      const kpi = getKpiData(widget, index);
 
       return (
-        <View style={[styles.widget, styles.kpiWidget]}>
+        <View style={[styles.widget, styles.kpiWidget, isSelected && styles.selectedWidget]}>
           <View style={styles.visualHeader}>
             <Text style={styles.visualTitle}>{kpi.title}</Text>
             <Text style={styles.visualMenu}>...</Text>
@@ -304,19 +562,19 @@ export default function DashboardBuilder() {
     }
 
     return (
-      <View style={styles.widget}>
+      <View style={[styles.widget, isSelected && styles.selectedWidget]}>
         <View style={styles.visualHeader}>
           <Text style={styles.visualTitle}>{widget.title}</Text>
           <Text style={styles.visualMenu}>...</Text>
         </View>
 
         <View style={styles.fieldChips}>
-          <Text style={styles.fieldChip}>X-axis: Auto</Text>
-          <Text style={styles.fieldChip}>Values: Auto</Text>
+          <Text style={styles.fieldChip}>X-axis: {widget.xField ?? defaultXField}</Text>
+          <Text style={styles.fieldChip}>Values: {widget.valueField ?? defaultValueField}</Text>
         </View>
 
         <View pointerEvents="none" style={styles.chartArea}>
-          {renderChart(widget.type)}
+          {renderChart(widget)}
         </View>
       </View>
     );
@@ -330,12 +588,13 @@ export default function DashboardBuilder() {
             (tab) => (
               <TouchableOpacity
                 key={tab}
-                style={[styles.tab, tab === "Home" && styles.activeTab]}
+                style={[styles.tab, tab === activeTab && styles.activeTab]}
+                onPress={() => setActiveTab(tab)}
               >
                 <Text
                   style={[
                     styles.tabText,
-                    tab === "Home" && styles.activeTabText,
+                    tab === activeTab && styles.activeTabText,
                   ]}
                 >
                   {tab}
@@ -345,7 +604,7 @@ export default function DashboardBuilder() {
           )}
         </View>
 
-        <TouchableOpacity style={styles.shareButton}>
+        <TouchableOpacity style={styles.shareButton} onPress={saveDashboard}>
           <Text style={styles.shareText}>Share</Text>
         </TouchableOpacity>
       </View>
@@ -355,8 +614,16 @@ export default function DashboardBuilder() {
           <View key={group.title} style={styles.ribbonGroup}>
             <View style={styles.ribbonItems}>
               {group.items.map((item) => (
-                <TouchableOpacity key={item} style={styles.ribbonButton}>
-                  <View style={styles.ribbonIcon} />
+                <TouchableOpacity
+                  key={item}
+                  style={styles.ribbonButton}
+                  onPress={() => handleRibbonAction(item)}
+                >
+                  <View style={styles.ribbonIcon}>
+                    <Text style={styles.ribbonIconText}>
+                      {getRibbonInitials(item)}
+                    </Text>
+                  </View>
                   <Text style={styles.ribbonButtonText}>{item}</Text>
                 </TouchableOpacity>
               ))}
@@ -364,6 +631,12 @@ export default function DashboardBuilder() {
             <Text style={styles.ribbonGroupTitle}>{group.title}</Text>
           </View>
         ))}
+      </View>
+
+      <View style={styles.statusBar}>
+        <Text style={styles.statusText}>Tab: {activeTab}</Text>
+        <Text style={styles.statusText}>Dataset: {selectedDataset?.name}</Text>
+        <Text style={styles.statusText}>Visuals: {widgets.length}</Text>
       </View>
 
       <View style={styles.workspace}>
@@ -408,7 +681,7 @@ export default function DashboardBuilder() {
                           sm: 6,
                           xs: 2,
                         }}
-                        rowHeight={72}
+                        rowHeight={56}
                         autoSize
                         verticalCompact={false}
                         margin={[12, 12]}
@@ -420,7 +693,11 @@ export default function DashboardBuilder() {
                         onLayoutChange={onLayoutChange}
                       >
                         {widgets.map((widget, index) => (
-                          <div key={widget.id} style={GRID_ITEM_STYLE}>
+                          <div
+                            key={widget.id}
+                            style={GRID_ITEM_STYLE}
+                            onClick={() => setSelectedWidgetId(widget.id)}
+                          >
                             {renderWidget(widget, index)}
                           </div>
                         ))}
@@ -465,8 +742,11 @@ export default function DashboardBuilder() {
               {visualButtons.map((visual) => (
                 <TouchableOpacity
                   key={visual.type}
-                  style={styles.visualButton}
-                  onPress={() => addWidget(visual.type)}
+                  style={[
+                    styles.visualButton,
+                    selectedWidget?.type === visual.type && styles.activeVisualButton,
+                  ]}
+                  onPress={() => changeSelectedVisualType(visual.type)}
                 >
                   <Text style={styles.visualIcon}>{visual.icon}</Text>
                   <Text style={styles.visualButtonText}>{visual.label}</Text>
@@ -475,8 +755,31 @@ export default function DashboardBuilder() {
             </View>
 
             <View style={styles.dropZone}>
-              <Text style={styles.dropZoneTitle}>Values</Text>
-              <Text style={styles.dropZoneText}>Add data fields here</Text>
+              <Text style={styles.dropZoneTitle}>Selected visual</Text>
+              <Text style={styles.dropZoneText}>
+                {selectedWidget?.title ?? "Select a visual"}
+              </Text>
+              <Text style={styles.dropZoneText}>
+                Axis: {selectedWidget?.xField ?? "None"}
+              </Text>
+              <Text style={styles.dropZoneText}>
+                Values: {selectedWidget?.valueField ?? "None"}
+              </Text>
+            </View>
+
+            <View style={styles.visualActions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={duplicateSelectedVisual}
+              >
+                <Text style={styles.actionButtonText}>Duplicate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={deleteSelectedVisual}
+              >
+                <Text style={styles.actionButtonText}>Delete</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -509,14 +812,28 @@ export default function DashboardBuilder() {
 
             <ScrollView style={styles.fieldsList}>
               {selectedFields.map((col: any) => (
-                <View key={col.name} style={styles.fieldItem}>
-                  <View style={styles.fieldCheckbox} />
+                <TouchableOpacity
+                  key={col.name}
+                  style={styles.fieldItem}
+                  onPress={() => assignFieldToSelectedVisual(col.name)}
+                >
+                  <View
+                    style={[
+                      styles.fieldCheckbox,
+                      (selectedWidget?.xField === col.name ||
+                        selectedWidget?.valueField === col.name) &&
+                        styles.checkedField,
+                    ]}
+                  />
                   <Text style={styles.fieldText}>{col.name}</Text>
-                </View>
+                  <Text style={styles.fieldType}>
+                    {numericFields.includes(col.name) ? "123" : "abc"}
+                  </Text>
+                </TouchableOpacity>
               ))}
             </ScrollView>
 
-            <TouchableOpacity style={styles.saveButton}>
+            <TouchableOpacity style={styles.saveButton} onPress={saveDashboard}>
               <Text style={styles.saveButtonText}>Save Dashboard</Text>
             </TouchableOpacity>
           </View>
@@ -619,8 +936,16 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     borderWidth: 1,
     borderColor: "#777777",
-    backgroundColor: "#333333",
+    backgroundColor: "#2b2b2b",
     marginBottom: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  ribbonIconText: {
+    color: "#dcecff",
+    fontSize: 8,
+    fontWeight: "800",
   },
 
   ribbonButtonText: {
@@ -641,6 +966,23 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     backgroundColor: "#202020",
+  },
+
+  statusBar: {
+    height: 26,
+    backgroundColor: "#191919",
+    borderBottomWidth: 1,
+    borderBottomColor: "#303030",
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 18,
+  },
+
+  statusText: {
+    color: "#cfcfcf",
+    fontSize: 11,
+    fontWeight: "600",
   },
 
   leftRail: {
@@ -678,7 +1020,7 @@ const styles = StyleSheet.create({
 
   reportShell: {
     flex: 1,
-    padding: 20,
+    padding: 12,
     backgroundColor: "#ffffff",
   },
 
@@ -688,8 +1030,8 @@ const styles = StyleSheet.create({
   },
 
   reportBoundary: {
-    minWidth: 1064,
-    minHeight: 664,
+    minWidth: 1084,
+    minHeight: 564,
     borderWidth: 1,
     borderColor: "#555555",
     borderStyle: "dotted",
@@ -787,7 +1129,7 @@ const styles = StyleSheet.create({
   },
 
   sidePanel: {
-    width: 250,
+    width: 270,
     backgroundColor: "#181818",
     borderLeftWidth: 1,
     borderLeftColor: "#333333",
@@ -821,14 +1163,19 @@ const styles = StyleSheet.create({
   },
 
   visualButton: {
-    width: 50,
-    height: 42,
+    width: 52,
+    height: 44,
     borderRadius: 3,
     borderWidth: 1,
     borderColor: "#3f3f3f",
     backgroundColor: "#242424",
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  activeVisualButton: {
+    borderColor: "#00b294",
+    backgroundColor: "#123c37",
   },
 
   visualIcon: {
@@ -862,6 +1209,34 @@ const styles = StyleSheet.create({
   dropZoneText: {
     color: "#d0d0d0",
     fontSize: 12,
+    marginTop: 2,
+  },
+
+  visualActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+
+  actionButton: {
+    flex: 1,
+    backgroundColor: "#2a2a2a",
+    borderWidth: 1,
+    borderColor: "#444444",
+    borderRadius: 3,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+
+  deleteButton: {
+    backgroundColor: "#4a1f1f",
+    borderColor: "#6b2b2b",
+  },
+
+  actionButtonText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "800",
   },
 
   nameInput: {
@@ -896,7 +1271,7 @@ const styles = StyleSheet.create({
   },
 
   fieldsList: {
-    maxHeight: 210,
+    maxHeight: 260,
   },
 
   fieldItem: {
@@ -913,9 +1288,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
 
+  checkedField: {
+    backgroundColor: "#00b294",
+    borderColor: "#00b294",
+  },
+
   fieldText: {
+    flex: 1,
     color: "#ffffff",
     fontSize: 12,
+  },
+
+  fieldType: {
+    color: "#8f8f8f",
+    fontSize: 10,
+    fontWeight: "800",
   },
 
   saveButton: {
@@ -945,8 +1332,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
 
+  selectedWidget: {
+    borderColor: "#00b294",
+    borderWidth: 2,
+  },
+
   kpiWidget: {
     justifyContent: "space-between",
+    paddingVertical: 12,
   },
 
   visualHeader: {
@@ -986,7 +1379,7 @@ const styles = StyleSheet.create({
 
   kpiValue: {
     color: "#111111",
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "800",
   },
 
