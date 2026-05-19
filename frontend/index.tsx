@@ -1,4 +1,24 @@
-import { Text, View, StyleSheet, Image } from "react-native";
+import { Redirect } from "expo-router";
+import { useAuthStore } from "./stores/authStore";
+
+export default function Page() {
+  const { token } = useAuthStore();
+
+  if (token) {
+    return <Redirect href="/dashboard-builder" />;
+  }
+
+  return <Redirect href="/auth/login" />;
+}
+
+
+
+
+
+
+
+
+/*import { Text, View, StyleSheet, Image } from "react-native";
 
 const EXPO_PUBLIC_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -27,4 +47,4 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "contain",
   },
-});
+});*/
