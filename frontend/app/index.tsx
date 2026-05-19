@@ -1,25 +1,35 @@
-import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { router } from 'expo-router';
+import { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { useRouter } from "expo-router";
 
 export default function Page() {
+  const router = useRouter();
+
   useEffect(() => {
-    router.replace('/dashboard-builder');
+    const timeout = setTimeout(() => {
+      router.replace("/dashboard-builder");
+    }, 0);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#3b82f6" />
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <ActivityIndicator size="large" />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a0a',
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-});
+
+
+/*import { Redirect } from "expo-router";
+
+export default function Page() {
+  return <Redirect href="/dashboard-builder" />;
+}*/
