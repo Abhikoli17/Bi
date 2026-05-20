@@ -1,4 +1,17 @@
-import { useEffect } from "react";
+import { Redirect } from "expo-router";
+import { useAuthStore } from "../stores/authStore";
+
+export default function Page() {
+  const { token } = useAuthStore();
+
+  if (token) {
+    return <Redirect href="/dashboard-builder" />;
+  }
+
+  return <Redirect href="/auth/login" />;
+}
+
+/*import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useRouter } from "expo-router";
 

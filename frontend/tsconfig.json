@@ -9,6 +9,10 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "types": ["react", "react-dom"]
-  }
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "types": ["react", "react-dom", "react-native"]
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
 }
