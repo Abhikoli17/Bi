@@ -156,6 +156,14 @@ const visualButtons: {
   { icon: "LIN", label: "Line", type: "line" },
   { icon: "PIE", label: "Pie", type: "pie" },
   { icon: "123", label: "KPI", type: "kpi" },
+  { icon: "COL", label: "Column", type: "bar" },
+  { icon: "STK", label: "Stack", type: "bar" },
+  { icon: "ARE", label: "Area", type: "line" },
+  { icon: "DON", label: "Donut", type: "pie" },
+  { icon: "TBL", label: "Table", type: "kpi" },
+  { icon: "MAP", label: "Map", type: "pie" },
+  { icon: "SC", label: "Scatter", type: "bar" },
+  { icon: "R", label: "R", type: "line" },
 ];
 
 const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
@@ -812,13 +820,45 @@ export default function DashboardBuilder() {
           </View>
         </View>
 
-        <View style={styles.filtersRail}>
-          <Text style={styles.verticalLabel}>Filters</Text>
+        <View style={styles.filtersPanel}>
+          <View style={styles.filtersHeader}>
+            <Text style={styles.filtersTitle}>Filters</Text>
+            <Text style={styles.panelChevron}>›</Text>
+          </View>
+
+          <TextInput
+            placeholder="Search"
+            placeholderTextColor="#555555"
+            style={styles.filterSearch}
+          />
+
+          <View style={styles.filterBlock}>
+            <View style={styles.filterBlockHeader}>
+              <Text style={styles.filterBlockTitle}>Filters on this page</Text>
+              <Text style={styles.filterDots}>...</Text>
+            </View>
+            <TouchableOpacity style={styles.filterDropZone}>
+              <Text style={styles.filterDropText}>Add data fields here</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.filterBlock}>
+            <View style={styles.filterBlockHeader}>
+              <Text style={styles.filterBlockTitle}>Filters on all pages</Text>
+              <Text style={styles.filterDots}>...</Text>
+            </View>
+            <TouchableOpacity style={styles.filterDropZone}>
+              <Text style={styles.filterDropText}>Add data fields here</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.sidePanel}>
-          <View style={styles.panelSection}>
-            <Text style={styles.panelTitle}>Visualizations</Text>
+        <View style={styles.rightPanes}>
+          <View style={styles.visualPane}>
+            <View style={styles.darkPanelHeader}>
+              <Text style={styles.panelTitle}>Visualizations</Text>
+              <Text style={styles.panelChevron}>›</Text>
+            </View>
             <Text style={styles.panelSubtitle}>Build visual</Text>
 
             <View style={styles.visualGrid}>
@@ -866,8 +906,17 @@ export default function DashboardBuilder() {
             </View>
           </View>
 
-          <View style={styles.panelSection}>
-            <Text style={styles.panelTitle}>Data</Text>
+          <View style={styles.dataPane}>
+            <View style={styles.darkPanelHeader}>
+              <Text style={styles.panelTitle}>Data</Text>
+              <Text style={styles.panelChevron}>›</Text>
+            </View>
+
+            <TextInput
+              placeholder="Search"
+              placeholderTextColor="#888888"
+              style={styles.dataSearch}
+            />
 
             <TextInput
               value={dashboardName}
@@ -1198,36 +1247,102 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  filtersRail: {
-    width: 34,
+  filtersPanel: {
+    width: 220,
     backgroundColor: "#ffffff",
     borderLeftWidth: 1,
-    borderLeftColor: "#c9c9c9",
-    borderRightWidth: 1,
-    borderRightColor: "#c9c9c9",
+    borderLeftColor: "#c8c8c8",
+    padding: 10,
+  },
+
+  filtersHeader: {
+    height: 28,
+    flexDirection: "row",
     alignItems: "center",
-    paddingTop: 12,
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
 
-  verticalLabel: {
+  filtersTitle: {
+    color: "#222222",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  filterSearch: {
+    height: 34,
+    borderWidth: 1,
+    borderColor: "#bcbcbc",
+    paddingHorizontal: 10,
+    color: "#111111",
+    marginBottom: 16,
+  },
+
+  filterBlock: {
+    marginBottom: 18,
+  },
+
+  filterBlockHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+
+  filterBlockTitle: {
     color: "#333333",
-    fontWeight: "700",
     fontSize: 12,
-    transform: [{ rotate: "90deg" }],
-    marginTop: 34,
   },
 
-  sidePanel: {
-    width: 270,
+  filterDots: {
+    color: "#777777",
+    fontWeight: "800",
+  },
+
+  filterDropZone: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: "#333333",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  filterDropText: {
+    color: "#555555",
+    fontSize: 12,
+  },
+
+  rightPanes: {
+    width: 360,
+    flexDirection: "row",
     backgroundColor: "#181818",
     borderLeftWidth: 1,
     borderLeftColor: "#333333",
   },
 
-  panelSection: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#3a3a3a",
+  visualPane: {
+    width: 180,
+    borderRightWidth: 1,
+    borderRightColor: "#4a4a4a",
+    padding: 8,
+  },
+
+  dataPane: {
+    flex: 1,
     padding: 10,
+  },
+
+  darkPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  panelChevron: {
+    color: "#d8d8d8",
+    fontSize: 24,
+    fontWeight: "800",
+    lineHeight: 24,
   },
 
   panelTitle: {
@@ -1247,13 +1362,13 @@ const styles = StyleSheet.create({
   visualGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 7,
+    gap: 5,
     marginBottom: 12,
   },
 
   visualButton: {
-    width: 52,
-    height: 44,
+    width: 36,
+    height: 32,
     borderRadius: 3,
     borderWidth: 1,
     borderColor: "#3f3f3f",
@@ -1269,14 +1384,14 @@ const styles = StyleSheet.create({
 
   visualIcon: {
     color: "#58a6ff",
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "800",
     lineHeight: 16,
   },
 
   visualButtonText: {
     color: "#d8d8d8",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
   },
 
@@ -1334,6 +1449,16 @@ const styles = StyleSheet.create({
     borderColor: "#3e3e3e",
     borderRadius: 3,
     padding: 9,
+    color: "#ffffff",
+    marginBottom: 10,
+  },
+
+  dataSearch: {
+    height: 28,
+    borderWidth: 1,
+    borderColor: "#555555",
+    borderRadius: 3,
+    paddingHorizontal: 8,
     color: "#ffffff",
     marginBottom: 10,
   },
