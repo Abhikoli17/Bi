@@ -226,6 +226,9 @@ export default function DashboardBuilder() {
   const { token } = useAuthStore();
   const [activeTab, setActiveTab] = useState("Home");
   const [selectedWidgetId, setSelectedWidgetId] = useState("kpi1");
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
+  const [visualsCollapsed, setVisualsCollapsed] = useState(false);
+  const [dataCollapsed, setDataCollapsed] = useState(false);
 
   const [widgets, setWidgets] = useState<Widget[]>([
     {
@@ -820,45 +823,76 @@ export default function DashboardBuilder() {
           </View>
         </View>
 
-        <View style={styles.filtersPanel}>
-          <View style={styles.filtersHeader}>
-            <Text style={styles.filtersTitle}>Filters</Text>
-            <Text style={styles.panelChevron}>›</Text>
-          </View>
-
-          <TextInput
-            placeholder="Search"
-            placeholderTextColor="#555555"
-            style={styles.filterSearch}
-          />
-
-          <View style={styles.filterBlock}>
-            <View style={styles.filterBlockHeader}>
-              <Text style={styles.filterBlockTitle}>Filters on this page</Text>
-              <Text style={styles.filterDots}>...</Text>
-            </View>
-            <TouchableOpacity style={styles.filterDropZone}>
-              <Text style={styles.filterDropText}>Add data fields here</Text>
+        {filtersCollapsed ? (
+          <TouchableOpacity
+            style={[styles.collapsedPane, styles.collapsedLightPane]}
+            onPress={() => setFiltersCollapsed(false)}
+          >
+            <Text style={styles.collapsedLightChevron}>{"<"}</Text>
+            <Text style={styles.collapsedLightText}>Filters</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.filtersPanel}>
+            <TouchableOpacity
+              style={styles.filtersHeader}
+              onPress={() => setFiltersCollapsed(true)}
+            >
+              <Text style={styles.filtersTitle}>Filters</Text>
+              <Text style={styles.lightPanelChevron}>{">"}</Text>
             </TouchableOpacity>
-          </View>
 
-          <View style={styles.filterBlock}>
-            <View style={styles.filterBlockHeader}>
-              <Text style={styles.filterBlockTitle}>Filters on all pages</Text>
-              <Text style={styles.filterDots}>...</Text>
+            <TextInput
+              placeholder="Search"
+              placeholderTextColor="#555555"
+              style={styles.filterSearch}
+            />
+
+            <View style={styles.filterBlock}>
+              <View style={styles.filterBlockHeader}>
+                <Text style={styles.filterBlockTitle}>Filters on this page</Text>
+                <Text style={styles.filterDots}>...</Text>
+              </View>
+              <TouchableOpacity style={styles.filterDropZone}>
+                <Text style={styles.filterDropText}>Add data fields here</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.filterDropZone}>
-              <Text style={styles.filterDropText}>Add data fields here</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
 
-        <View style={styles.rightPanes}>
+            <View style={styles.filterBlock}>
+              <View style={styles.filterBlockHeader}>
+                <Text style={styles.filterBlockTitle}>Filters on all pages</Text>
+                <Text style={styles.filterDots}>...</Text>
+              </View>
+              <TouchableOpacity style={styles.filterDropZone}>
+                <Text style={styles.filterDropText}>Add data fields here</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        <View
+          style={[
+            styles.rightPanes,
+            visualsCollapsed !== dataCollapsed && styles.rightPanesOneCollapsed,
+            visualsCollapsed && dataCollapsed && styles.rightPanesCollapsed,
+          ]}
+        >
+          {visualsCollapsed ? (
+            <TouchableOpacity
+              style={styles.collapsedPane}
+              onPress={() => setVisualsCollapsed(false)}
+            >
+              <Text style={styles.collapsedChevron}>{"<"}</Text>
+              <Text style={styles.collapsedPaneText}>Visualizations</Text>
+            </TouchableOpacity>
+          ) : (
           <View style={styles.visualPane}>
-            <View style={styles.darkPanelHeader}>
+            <TouchableOpacity
+              style={styles.darkPanelHeader}
+              onPress={() => setVisualsCollapsed(true)}
+            >
               <Text style={styles.panelTitle}>Visualizations</Text>
-              <Text style={styles.panelChevron}>›</Text>
-            </View>
+              <Text style={styles.panelChevron}>{">"}</Text>
+            </TouchableOpacity>
             <Text style={styles.panelSubtitle}>Build visual</Text>
 
             <View style={styles.visualGrid}>
@@ -905,12 +939,25 @@ export default function DashboardBuilder() {
               </TouchableOpacity>
             </View>
           </View>
+          )}
 
+          {dataCollapsed ? (
+            <TouchableOpacity
+              style={styles.collapsedPane}
+              onPress={() => setDataCollapsed(false)}
+            >
+              <Text style={styles.collapsedChevron}>{"<"}</Text>
+              <Text style={styles.collapsedPaneText}>Data</Text>
+            </TouchableOpacity>
+          ) : (
           <View style={styles.dataPane}>
-            <View style={styles.darkPanelHeader}>
+            <TouchableOpacity
+              style={styles.darkPanelHeader}
+              onPress={() => setDataCollapsed(true)}
+            >
               <Text style={styles.panelTitle}>Data</Text>
-              <Text style={styles.panelChevron}>›</Text>
-            </View>
+              <Text style={styles.panelChevron}>{">"}</Text>
+            </TouchableOpacity>
 
             <TextInput
               placeholder="Search"
@@ -969,6 +1016,7 @@ export default function DashboardBuilder() {
               <Text style={styles.saveButtonText}>Save Dashboard</Text>
             </TouchableOpacity>
           </View>
+          )}
         </View>
       </View>
     </View>
@@ -1320,6 +1368,14 @@ const styles = StyleSheet.create({
     borderLeftColor: "#333333",
   },
 
+  rightPanesCollapsed: {
+    width: 72,
+  },
+
+  rightPanesOneCollapsed: {
+    width: 216,
+  },
+
   visualPane: {
     width: 180,
     borderRightWidth: 1,
@@ -1343,6 +1399,63 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     lineHeight: 24,
+  },
+
+  lightPanelChevron: {
+    color: "#777777",
+    fontSize: 24,
+    fontWeight: "800",
+    lineHeight: 24,
+  },
+
+  collapsedPane: {
+    width: 36,
+    backgroundColor: "#111111",
+    borderRightWidth: 1,
+    borderRightColor: "#3a3a3a",
+    alignItems: "center",
+    paddingTop: 8,
+  },
+
+  collapsedLightPane: {
+    backgroundColor: "#ffffff",
+    borderLeftWidth: 1,
+    borderLeftColor: "#c8c8c8",
+    borderRightColor: "#c8c8c8",
+  },
+
+  collapsedChevron: {
+    color: "#d8d8d8",
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+
+  collapsedLightChevron: {
+    color: "#555555",
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+
+  collapsedPaneText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "800",
+    transform: [{ rotate: "90deg" }],
+    width: 130,
+    marginTop: 52,
+  },
+
+  collapsedLightText: {
+    color: "#222222",
+    fontSize: 14,
+    fontWeight: "800",
+    transform: [{ rotate: "90deg" }],
+    width: 80,
+    marginTop: 30,
   },
 
   panelTitle: {
@@ -1603,3 +1716,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+
