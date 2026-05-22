@@ -29,7 +29,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace('/(tabs)/datasets');
+      router.replace('/dashboard-builder');
     } catch (error: any) {
       Alert.alert('Login Failed', error.message);
     } finally {

@@ -158,13 +158,45 @@ const visualButtons: {
   { icon: "123", label: "KPI", type: "kpi" },
 ];
 
-const ribbonGroups = [
-  { title: "Data", items: ["Get data", "Excel", "SQL Server", "Enter data"] },
-  { title: "Queries", items: ["Transform data", "Refresh"] },
-  { title: "Insert", items: ["New visual", "Text box", "More visuals"] },
-  { title: "Calculations", items: ["New measure", "Quick measure"] },
-  { title: "Share", items: ["Publish", "Share"] },
-];
+const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
+  File: [
+    { title: "File", items: ["New report", "Open", "Save", "Export"] },
+  ],
+  Home: [
+    { title: "Data", items: ["Get data", "Excel", "SQL Server", "Enter data"] },
+    { title: "Queries", items: ["Transform data", "Refresh"] },
+    { title: "Insert", items: ["New visual", "Text box", "More visuals"] },
+    { title: "Calculations", items: ["New measure", "Quick measure"] },
+    { title: "Share", items: ["Publish", "Share"] },
+  ],
+  Insert: [
+    { title: "Pages", items: ["New page"] },
+    { title: "Visuals", items: ["New visual", "Bar chart", "Line chart", "Pie chart"] },
+    { title: "AI visuals", items: ["Key influencers", "Decomposition tree", "Narrative"] },
+    { title: "Elements", items: ["Text box", "Buttons", "Shapes", "Image"] },
+  ],
+  Modeling: [
+    { title: "Relationships", items: ["Manage relationships"] },
+    { title: "Calculations", items: ["New measure", "Quick measure", "New column", "New table"] },
+    { title: "Parameters", items: ["New parameter"] },
+    { title: "Security", items: ["Manage roles", "View as"] },
+  ],
+  View: [
+    { title: "Themes", items: ["Theme 1", "Theme 2", "Theme 3", "Theme 4"] },
+    { title: "Page options", items: ["Page view", "Mobile layout", "Gridlines", "Snap to grid"] },
+    { title: "Show panes", items: ["Filters", "Bookmarks", "Selection"] },
+    { title: "Analyze", items: ["Performance analyzer", "Sync slicers"] },
+  ],
+  Optimize: [
+    { title: "Queries", items: ["Pause visuals", "Refresh visuals"] },
+    { title: "Report", items: ["Optimization presets"] },
+    { title: "Review", items: ["Performance analyzer"] },
+    { title: "Apply", items: ["Apply all slicers"] },
+  ],
+  Help: [
+    { title: "Help", items: ["Learn", "Documentation", "About"] },
+  ],
+};
 
 const getRibbonInitials = (label: string) =>
   label
@@ -405,6 +437,13 @@ export default function DashboardBuilder() {
 
   const handleRibbonAction = (item: string) => {
     const actions: Record<string, () => void> = {
+      "New report": () => {
+        setWidgets([]);
+        setSelectedWidgetId("");
+      },
+      Open: resetDemoData,
+      Save: saveDashboard,
+      Export: saveDashboard,
       "Get data": resetDemoData,
       Excel: resetDemoData,
       "SQL Server": resetDemoData,
@@ -413,10 +452,49 @@ export default function DashboardBuilder() {
         Alert.alert("Transform data", "Demo mode: fields are ready in the Data pane."),
       Refresh: loadDatasets,
       "New visual": () => addWidget("bar"),
+      "Bar chart": () => addWidget("bar"),
+      "Line chart": () => addWidget("line"),
+      "Pie chart": () => addWidget("pie"),
       "Text box": () => addWidget("kpi"),
       "More visuals": () => addWidget("pie"),
+      "Key influencers": () => addWidget("bar"),
+      "Decomposition tree": () => addWidget("pie"),
+      Narrative: () => addWidget("kpi"),
+      Buttons: () => Alert.alert("Button added", "Demo mode: button controls can be mocked here."),
+      Shapes: () => Alert.alert("Shape added", "Demo mode: shape controls can be mocked here."),
+      Image: () => Alert.alert("Image added", "Demo mode: image controls can be mocked here."),
+      "New page": () => Alert.alert("New page", "Demo mode currently supports Page 1."),
       "New measure": () => addWidget("kpi"),
       "Quick measure": () => addWidget("line"),
+      "New column": () => Alert.alert("New column", "Demo mode: calculated column created."),
+      "New table": resetDemoData,
+      "New parameter": () => Alert.alert("Parameter", "Demo mode: parameter created."),
+      "Manage relationships": () =>
+        Alert.alert("Relationships", "Demo datasets are already related for this prototype."),
+      "Manage roles": () => Alert.alert("Security", "Demo mode: roles panel opened."),
+      "View as": () => Alert.alert("Security", "Demo mode: viewing as report user."),
+      "Theme 1": () => setActiveTab("View"),
+      "Theme 2": () => setActiveTab("View"),
+      "Theme 3": () => setActiveTab("View"),
+      "Theme 4": () => setActiveTab("View"),
+      "Page view": () => Alert.alert("Page view", "Canvas is set to fit-to-width demo mode."),
+      "Mobile layout": () => Alert.alert("Mobile layout", "Demo mode: mobile layout preview."),
+      Gridlines: () => Alert.alert("Gridlines", "The dotted report boundary is enabled."),
+      "Snap to grid": () => Alert.alert("Snap to grid", "Grid snapping is enabled."),
+      Filters: () => Alert.alert("Filters", "Filters pane is visible."),
+      Bookmarks: () => Alert.alert("Bookmarks", "Demo mode: bookmarks pane opened."),
+      Selection: () => Alert.alert("Selection", "Click visuals to select them on canvas."),
+      "Performance analyzer": () =>
+        Alert.alert("Performance analyzer", `${widgets.length} visuals rendered.`),
+      "Sync slicers": () => Alert.alert("Sync slicers", "Demo mode: slicers synced."),
+      "Pause visuals": () => Alert.alert("Pause visuals", "Demo mode: visual updates paused."),
+      "Refresh visuals": loadDatasets,
+      "Optimization presets": () =>
+        Alert.alert("Optimization", "Demo mode: optimized for fewer visuals and simpler queries."),
+      "Apply all slicers": () => Alert.alert("Slicers", "All demo slicers applied."),
+      Learn: () => Alert.alert("Help", "Select a visual, then click fields to bind data."),
+      Documentation: () => Alert.alert("Help", "This is a Power BI-style dashboard prototype."),
+      About: () => Alert.alert("About", "InsightEngine dashboard builder demo."),
       Publish: saveDashboard,
       Share: saveDashboard,
     };
@@ -610,7 +688,7 @@ export default function DashboardBuilder() {
       </View>
 
       <View style={styles.ribbon}>
-        {ribbonGroups.map((group) => (
+        {(ribbonTabs[activeTab] ?? ribbonTabs.Home).map((group) => (
           <View key={group.title} style={styles.ribbonGroup}>
             <View style={styles.ribbonItems}>
               {group.items.map((item) => (
@@ -619,7 +697,12 @@ export default function DashboardBuilder() {
                   style={styles.ribbonButton}
                   onPress={() => handleRibbonAction(item)}
                 >
-                  <View style={styles.ribbonIcon}>
+                  <View
+                    style={[
+                      styles.ribbonIcon,
+                      activeTab === "View" && item.startsWith("Theme") && styles.themeIcon,
+                    ]}
+                  >
                     <Text style={styles.ribbonIconText}>
                       {getRibbonInitials(item)}
                     </Text>
@@ -911,7 +994,7 @@ const styles = StyleSheet.create({
   },
 
   ribbonGroup: {
-    minWidth: 128,
+    minWidth: 132,
     borderRightWidth: 1,
     borderRightColor: "#3a3a3a",
     paddingHorizontal: 8,
@@ -926,7 +1009,7 @@ const styles = StyleSheet.create({
   },
 
   ribbonButton: {
-    width: 54,
+    width: 58,
     alignItems: "center",
   },
 
@@ -946,6 +1029,12 @@ const styles = StyleSheet.create({
     color: "#dcecff",
     fontSize: 8,
     fontWeight: "800",
+  },
+
+  themeIcon: {
+    width: 54,
+    backgroundColor: "#f8f8f8",
+    borderColor: "#8f8f8f",
   },
 
   ribbonButtonText: {
