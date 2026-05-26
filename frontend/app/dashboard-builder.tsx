@@ -43,6 +43,7 @@ type WidgetType = "kpi" | "bar" | "line" | "pie";
 
 interface Widget {
   id: string;
+  pageId: string;
   type: WidgetType;
   title: string;
   xField?: string;
@@ -247,6 +248,7 @@ export default function DashboardBuilder() {
   const [widgets, setWidgets] = useState<Widget[]>([
     {
       id: "kpi1",
+      pageId: "page-1",
       type: "kpi",
       title: "Total Quantity",
       valueField: "Quantity",
@@ -254,6 +256,7 @@ export default function DashboardBuilder() {
     },
     {
       id: "line1",
+      pageId: "page-1",
       type: "line",
       title: "Sales Trend",
       xField: "Date",
@@ -262,6 +265,7 @@ export default function DashboardBuilder() {
     },
     {
       id: "bar1",
+      pageId: "page-1",
       type: "bar",
       title: "Sales by Category",
       xField: "Region",
@@ -279,9 +283,16 @@ export default function DashboardBuilder() {
     [selectedDataset]
   );
 
+  const activePageWidgets = useMemo(
+    () => widgets.filter((widget) => widget.pageId === activePageId),
+    [activePageId, widgets]
+  );
+
   const selectedWidget = useMemo(
-    () => widgets.find((widget) => widget.id === selectedWidgetId) ?? widgets[0],
-    [selectedWidgetId, widgets]
+    () =>
+      activePageWidgets.find((widget) => widget.id === selectedWidgetId) ??
+      activePageWidgets[0],
+    [activePageWidgets, selectedWidgetId]
   );
 
   const datasetRows = useMemo(
@@ -342,6 +353,12 @@ export default function DashboardBuilder() {
     }
   }, [loadDatasets, token]);
 
+  useEffect(() => {
+    if (selectedWidget?.pageId === activePageId) return;
+
+    setSelectedWidgetId(activePageWidgets[0]?.id ?? "");
+  }, [activePageId, activePageWidgets, selectedWidget]);
+
   const createLayout = (type: WidgetType, index: number) => ({
     x: (index * 3) % 12,
     y: Infinity,
@@ -361,6 +378,7 @@ export default function DashboardBuilder() {
       },
     ]);
     setActivePageId(id);
+    setSelectedWidgetId("");
   };
 
   const changeZoom = (nextZoom: number) => {
@@ -380,11 +398,12 @@ export default function DashboardBuilder() {
       ...prev,
       {
         id,
+        pageId: activePageId,
         type,
         title: titles[type],
         xField: type === "kpi" ? undefined : defaultXField,
         valueField: defaultValueField,
-        layout: createLayout(type, prev.length),
+        layout: createLayout(type, activePageWidgets.length),
       },
     ]);
 
@@ -440,10 +459,12 @@ export default function DashboardBuilder() {
   };
 
   const deleteSelectedVisual = () => {
-    if (!selectedWidget || widgets.length === 1) return;
+    if (!selectedWidget) return;
 
     setWidgets((prev) => prev.filter((widget) => widget.id !== selectedWidget.id));
-    setSelectedWidgetId(widgets.find((widget) => widget.id !== selectedWidget.id)?.id ?? "");
+    setSelectedWidgetId(
+      activePageWidgets.find((widget) => widget.id !== selectedWidget.id)?.id ?? ""
+    );
   };
 
   const assignFieldToSelectedVisual = (fieldName: string) => {
@@ -476,9 +497,9 @@ export default function DashboardBuilder() {
   const saveDashboard = () => {
     Alert.alert(
       "Dashboard saved",
-      `${dashboardName || "Untitled dashboard"} has ${widgets.length} visual${
-        widgets.length === 1 ? "" : "s"
-      }.`
+      `${dashboardName || "Untitled dashboard"} has ${pages.length} page${
+        pages.length === 1 ? "" : "s"
+      } and ${widgets.length} visual${widgets.length === 1 ? "" : "s"}.`
     );
   };
 
@@ -540,7 +561,7 @@ export default function DashboardBuilder() {
       Bookmarks: () => Alert.alert("Bookmarks", "Demo mode: bookmarks pane opened."),
       Selection: () => Alert.alert("Selection", "Click visuals to select them on canvas."),
       "Performance analyzer": () =>
-        Alert.alert("Performance analyzer", `${widgets.length} visuals rendered.`),
+        Alert.alert("Performance analyzer", `${activePageWidgets.length} visuals rendered.`),
       "Sync slicers": () => Alert.alert("Sync slicers", "Demo mode: slicers synced."),
       "Pause visuals": () => Alert.alert("Pause visuals", "Demo mode: visual updates paused."),
       "Refresh visuals": loadDatasets,
@@ -774,7 +795,7 @@ export default function DashboardBuilder() {
       <View style={styles.statusBar}>
         <Text style={styles.statusText}>Tab: {activeTab}</Text>
         <Text style={styles.statusText}>Dataset: {selectedDataset?.name}</Text>
-        <Text style={styles.statusText}>Visuals: {widgets.length}</Text>
+        <Text style={styles.statusText}>Visuals: {activePageWidgets.length}</Text>
       </View>
 
       <View style={styles.workspace}>
@@ -801,7 +822,7 @@ export default function DashboardBuilder() {
                           <ResponsiveGridLayout
                             className="layout"
                             layouts={{
-                              lg: widgets.map((widget) => ({
+                              lg: activePageWidgets.map((widget) => ({
                                 i: widget.id,
                                 x: widget.layout.x,
                                 y: widget.layout.y,
@@ -832,7 +853,7 @@ export default function DashboardBuilder() {
                             resizeHandles={["se"]}
                             onLayoutChange={onLayoutChange}
                           >
-                            {widgets.map((widget, index) => (
+                            {activePageWidgets.map((widget, index) => (
                               <div
                                 key={widget.id}
                                 style={GRID_ITEM_STYLE}
