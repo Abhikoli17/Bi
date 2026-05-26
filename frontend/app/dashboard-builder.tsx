@@ -410,32 +410,8 @@ export default function DashboardBuilder() {
     setSelectedWidgetId(id);
   };
 
-  const changeSelectedVisualType = (type: WidgetType) => {
-    if (!selectedWidget) {
-      addWidget(type);
-      return;
-    }
-
-    const titles: Record<WidgetType, string> = {
-      kpi: "Total Revenue",
-      bar: "Clustered Bar Chart",
-      line: "Line Chart",
-      pie: "Pie Chart",
-    };
-
-    setWidgets((prev) =>
-      prev.map((widget) =>
-        widget.id === selectedWidget.id
-          ? {
-              ...widget,
-              type,
-              title: titles[type],
-              xField: type === "kpi" ? undefined : widget.xField ?? defaultXField,
-              valueField: widget.valueField ?? defaultValueField,
-            }
-          : widget
-      )
-    );
+  const addVisualFromPane = (type: WidgetType) => {
+    addWidget(type);
   };
 
   const duplicateSelectedVisual = () => {
@@ -1000,13 +976,17 @@ export default function DashboardBuilder() {
                     styles.visualButton,
                     selectedWidget?.type === visual.type && styles.activeVisualButton,
                   ]}
-                  onPress={() => changeSelectedVisualType(visual.type)}
+                  onPress={() => addVisualFromPane(visual.type)}
                 >
                   <Text style={styles.visualIcon}>{visual.icon}</Text>
                   <Text style={styles.visualButtonText}>{visual.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+
+            <Text style={styles.visualHint}>
+              Click a visual icon to add it to this page.
+            </Text>
 
             <View style={styles.dropZone}>
               <Text style={styles.dropZoneTitle}>Selected visual</Text>
@@ -1621,6 +1601,12 @@ const styles = StyleSheet.create({
     color: "#d8d8d8",
     fontSize: 8,
     fontWeight: "700",
+  },
+
+  visualHint: {
+    color: "#bdbdbd",
+    fontSize: 11,
+    marginBottom: 10,
   },
 
   dropZone: {
