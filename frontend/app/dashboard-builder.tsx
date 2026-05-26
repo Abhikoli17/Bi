@@ -55,12 +55,21 @@ interface Widget {
   };
 }
 
+interface ReportPage {
+  id: string;
+  name: string;
+}
+
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const REPORT_STAGE_STYLE = {
   width: 1060,
   minHeight: 540,
 } as any;
+
+const MIN_ZOOM = 50;
+const MAX_ZOOM = 150;
+const ZOOM_STEP = 10;
 
 const GRID_ITEM_STYLE = {
   height: "100%",
@@ -229,6 +238,11 @@ export default function DashboardBuilder() {
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
   const [visualsCollapsed, setVisualsCollapsed] = useState(false);
   const [dataCollapsed, setDataCollapsed] = useState(false);
+  const [pages, setPages] = useState<ReportPage[]>([
+    { id: "page-1", name: "Page 1" },
+  ]);
+  const [activePageId, setActivePageId] = useState("page-1");
+  const [zoomPercent, setZoomPercent] = useState(68);
 
   const [widgets, setWidgets] = useState<Widget[]>([
     {
@@ -295,6 +309,16 @@ export default function DashboardBuilder() {
 
   const defaultValueField = numericFields[0] ?? "Revenue";
   const defaultXField = categoryFields[0] ?? selectedFields[0]?.name ?? "Date";
+  const zoomScale = zoomPercent / 100;
+  const zoomThumbOffset = ((zoomPercent - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 86;
+  const zoomFrameStyle = {
+    width: REPORT_STAGE_STYLE.width * zoomScale,
+    minHeight: REPORT_STAGE_STYLE.minHeight * zoomScale,
+  } as any;
+  const zoomStageStyle = {
+    transform: `scale(${zoomScale})`,
+    transformOrigin: "top left",
+  } as any;
 
   const loadDatasets = useCallback(async () => {
     try {
@@ -324,6 +348,24 @@ export default function DashboardBuilder() {
     w: type === "kpi" ? 3 : 4,
     h: type === "kpi" ? 2 : 4,
   });
+
+  const addPage = () => {
+    const nextPageNumber = pages.length + 1;
+    const id = `page-${Date.now()}`;
+
+    setPages((prev) => [
+      ...prev,
+      {
+        id,
+        name: `Page ${nextPageNumber}`,
+      },
+    ]);
+    setActivePageId(id);
+  };
+
+  const changeZoom = (nextZoom: number) => {
+    setZoomPercent(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextZoom)));
+  };
 
   const addWidget = (type: WidgetType) => {
     const titles: Record<WidgetType, string> = {
@@ -451,6 +493,8 @@ export default function DashboardBuilder() {
       "New report": () => {
         setWidgets([]);
         setSelectedWidgetId("");
+        setPages([{ id: "page-1", name: "Page 1" }]);
+        setActivePageId("page-1");
       },
       Open: resetDemoData,
       Save: saveDashboard,
@@ -474,7 +518,7 @@ export default function DashboardBuilder() {
       Buttons: () => Alert.alert("Button added", "Demo mode: button controls can be mocked here."),
       Shapes: () => Alert.alert("Shape added", "Demo mode: shape controls can be mocked here."),
       Image: () => Alert.alert("Image added", "Demo mode: image controls can be mocked here."),
-      "New page": () => Alert.alert("New page", "Demo mode currently supports Page 1."),
+      "New page": addPage,
       "New measure": () => addWidget("kpi"),
       "Quick measure": () => addWidget("line"),
       "New column": () => Alert.alert("New column", "Demo mode: calculated column created."),
@@ -750,54 +794,58 @@ export default function DashboardBuilder() {
             <View style={styles.reportCanvas}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <ScrollView showsVerticalScrollIndicator={false}>
-                  <View style={styles.reportBoundary}>
-                    <div style={REPORT_STAGE_STYLE}>
-                      <ResponsiveGridLayout
-                        className="layout"
-                        layouts={{
-                          lg: widgets.map((widget) => ({
-                            i: widget.id,
-                            x: widget.layout.x,
-                            y: widget.layout.y,
-                            w: widget.layout.w,
-                            h: widget.layout.h,
-                          })),
-                        }}
-                        breakpoints={{
-                          lg: 1200,
-                          md: 996,
-                          sm: 768,
-                          xs: 480,
-                        }}
-                        cols={{
-                          lg: 12,
-                          md: 10,
-                          sm: 6,
-                          xs: 2,
-                        }}
-                        rowHeight={56}
-                        autoSize
-                        verticalCompact={false}
-                        margin={[12, 12]}
-                        containerPadding={[12, 12]}
-                        preventCollision={false}
-                        isResizable
-                        isDraggable
-                        resizeHandles={["se"]}
-                        onLayoutChange={onLayoutChange}
-                      >
-                        {widgets.map((widget, index) => (
-                          <div
-                            key={widget.id}
-                            style={GRID_ITEM_STYLE}
-                            onClick={() => setSelectedWidgetId(widget.id)}
+                  <div style={zoomFrameStyle}>
+                    <div style={zoomStageStyle}>
+                      <View style={styles.reportBoundary}>
+                        <div style={REPORT_STAGE_STYLE}>
+                          <ResponsiveGridLayout
+                            className="layout"
+                            layouts={{
+                              lg: widgets.map((widget) => ({
+                                i: widget.id,
+                                x: widget.layout.x,
+                                y: widget.layout.y,
+                                w: widget.layout.w,
+                                h: widget.layout.h,
+                              })),
+                            }}
+                            breakpoints={{
+                              lg: 1200,
+                              md: 996,
+                              sm: 768,
+                              xs: 480,
+                            }}
+                            cols={{
+                              lg: 12,
+                              md: 10,
+                              sm: 6,
+                              xs: 2,
+                            }}
+                            rowHeight={56}
+                            autoSize
+                            verticalCompact={false}
+                            margin={[12, 12]}
+                            containerPadding={[12, 12]}
+                            preventCollision={false}
+                            isResizable
+                            isDraggable
+                            resizeHandles={["se"]}
+                            onLayoutChange={onLayoutChange}
                           >
-                            {renderWidget(widget, index)}
-                          </div>
-                        ))}
-                      </ResponsiveGridLayout>
+                            {widgets.map((widget, index) => (
+                              <div
+                                key={widget.id}
+                                style={GRID_ITEM_STYLE}
+                                onClick={() => setSelectedWidgetId(widget.id)}
+                              >
+                                {renderWidget(widget, index)}
+                              </div>
+                            ))}
+                          </ResponsiveGridLayout>
+                        </div>
+                      </View>
                     </div>
-                  </View>
+                  </div>
                 </ScrollView>
               </ScrollView>
             </View>
@@ -805,20 +853,48 @@ export default function DashboardBuilder() {
 
           <View style={styles.bottomBar}>
             <View style={styles.pageTabs}>
-              <TouchableOpacity style={styles.pageTab}>
-                <Text style={styles.pageTabText}>Page 1</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.addPageButton}>
+              {pages.map((page) => (
+                <TouchableOpacity
+                  key={page.id}
+                  style={[
+                    styles.pageTab,
+                    activePageId === page.id && styles.activePageTab,
+                  ]}
+                  onPress={() => setActivePageId(page.id)}
+                >
+                  <Text style={styles.pageTabText}>{page.name}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.addPageButton} onPress={addPage}>
                 <Text style={styles.addPageText}>+</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.zoomControl}>
-              <Text style={styles.zoomText}>-</Text>
-              <View style={styles.zoomTrack}>
-                <View style={styles.zoomThumb} />
-              </View>
-              <Text style={styles.zoomText}>68%</Text>
+              <TouchableOpacity
+                style={styles.zoomButton}
+                onPress={() => changeZoom(zoomPercent - ZOOM_STEP)}
+              >
+                <Text style={styles.zoomText}>-</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.zoomTrack}
+                onPress={() => changeZoom(zoomPercent + ZOOM_STEP)}
+              >
+                <View
+                  style={[
+                    styles.zoomThumb,
+                    { marginLeft: Math.max(0, Math.min(82, zoomThumbOffset)) },
+                  ]}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.zoomButton}
+                onPress={() => changeZoom(zoomPercent + ZOOM_STEP)}
+              >
+                <Text style={styles.zoomText}>+</Text>
+              </TouchableOpacity>
+              <Text style={styles.zoomPercentText}>{zoomPercent}%</Text>
             </View>
           </View>
         </View>
@@ -1247,6 +1323,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#2f2f2f",
     borderBottomWidth: 3,
+    borderRightWidth: 1,
+    borderRightColor: "#1c1c1c",
+    borderBottomColor: "transparent",
+  },
+
+  activePageTab: {
     borderBottomColor: "#00b294",
   },
 
@@ -1273,7 +1355,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingRight: 16,
-    gap: 10,
+    gap: 8,
+  },
+
+  zoomButton: {
+    width: 20,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   zoomTrack: {
@@ -1287,7 +1376,12 @@ const styles = StyleSheet.create({
     width: 4,
     height: 12,
     backgroundColor: "#ffffff",
-    marginLeft: 46,
+  },
+
+  zoomPercentText: {
+    color: "#f1f1f1",
+    fontSize: 12,
+    minWidth: 34,
   },
 
   zoomText: {
@@ -1716,4 +1810,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
