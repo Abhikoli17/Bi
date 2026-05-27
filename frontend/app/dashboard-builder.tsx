@@ -176,6 +176,29 @@ const visualButtons: {
   { icon: "R", label: "R", type: "line" },
 ];
 
+const dataSourceOptions = [
+  "Excel workbook",
+  "Power BI semantic models",
+  "Dataflows",
+  "Dataverse",
+  "SQL Server",
+  "Analysis Services",
+  "Text/CSV",
+  "Web",
+  "OData feed",
+  "Blank query",
+  "Power BI Template Apps",
+  "More...",
+];
+
+const leftRailItems = [
+  { label: "Report", icon: "R" },
+  { label: "Data", icon: "D" },
+  { label: "Model", icon: "M" },
+  { label: "DAX", icon: "DAX" },
+  { label: "TMDL", icon: "TMDL" },
+];
+
 const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
   File: [
     { title: "File", items: ["New report", "Open", "Save", "Export"] },
@@ -239,6 +262,7 @@ export default function DashboardBuilder() {
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
   const [visualsCollapsed, setVisualsCollapsed] = useState(false);
   const [dataCollapsed, setDataCollapsed] = useState(false);
+  const [dataMenuOpen, setDataMenuOpen] = useState(false);
   const [pages, setPages] = useState<ReportPage[]>([
     { id: "page-1", name: "Page 1" },
   ]);
@@ -485,6 +509,27 @@ export default function DashboardBuilder() {
     Alert.alert("Demo data loaded", "The sample datasets are ready to use.");
   };
 
+  const selectDataSource = (source: string) => {
+    const sourceDataset =
+      source === "Excel workbook" || source === "Text/CSV"
+        ? demoDatasets[2]
+        : source === "SQL Server" || source === "Analysis Services"
+          ? demoDatasets[0]
+          : demoDatasets[1];
+
+    setDatasets(demoDatasets);
+    setSelectedDataset(sourceDataset);
+    setDataMenuOpen(false);
+    Alert.alert(source, `${sourceDataset.name} is loaded in the Data pane.`);
+  };
+
+  const askAi = () => {
+    Alert.alert(
+      "Ask AI",
+      "Try adding a visual, then select fields like Revenue, Region, Date, or Quantity."
+    );
+  };
+
   const handleRibbonAction = (item: string) => {
     const actions: Record<string, () => void> = {
       "New report": () => {
@@ -496,7 +541,7 @@ export default function DashboardBuilder() {
       Open: resetDemoData,
       Save: saveDashboard,
       Export: saveDashboard,
-      "Get data": resetDemoData,
+      "Get data": () => setDataMenuOpen((open) => !open),
       Excel: resetDemoData,
       "SQL Server": resetDemoData,
       "Enter data": resetDemoData,
@@ -734,9 +779,15 @@ export default function DashboardBuilder() {
           )}
         </View>
 
-        <TouchableOpacity style={styles.shareButton} onPress={saveDashboard}>
-          <Text style={styles.shareText}>Share</Text>
-        </TouchableOpacity>
+        <View style={styles.titleActions}>
+          <TouchableOpacity style={styles.askAiButton} onPress={askAi}>
+            <Text style={styles.askAiText}>Ask AI</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.shareButton} onPress={saveDashboard}>
+            <Text style={styles.shareText}>Share</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.ribbon}>
@@ -768,6 +819,27 @@ export default function DashboardBuilder() {
         ))}
       </View>
 
+      {dataMenuOpen && (
+        <View style={styles.dataSourceMenu}>
+          <Text style={styles.dataSourceMenuTitle}>Common data sources</Text>
+
+          {dataSourceOptions.map((source) => (
+            <TouchableOpacity
+              key={source}
+              style={styles.dataSourceItem}
+              onPress={() => selectDataSource(source)}
+            >
+              <View style={styles.dataSourceIcon}>
+                <Text style={styles.dataSourceIconText}>
+                  {getRibbonInitials(source)}
+                </Text>
+              </View>
+              <Text style={styles.dataSourceText}>{source}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       <View style={styles.statusBar}>
         <Text style={styles.statusText}>Tab: {activeTab}</Text>
         <Text style={styles.statusText}>Dataset: {selectedDataset?.name}</Text>
@@ -776,12 +848,19 @@ export default function DashboardBuilder() {
 
       <View style={styles.workspace}>
         <View style={styles.leftRail}>
-          {["Report", "Data", "Model", "DAX", "TMDL"].map((item, index) => (
+          {leftRailItems.map((item, index) => (
             <TouchableOpacity
-              key={item}
+              key={item.label}
               style={[styles.railItem, index === 0 && styles.activeRailItem]}
             >
-              <Text style={styles.railIcon}>{item.slice(0, 1)}</Text>
+              <Text
+                style={[
+                  styles.railIcon,
+                  item.icon.length > 1 && styles.railLongIcon,
+                ]}
+              >
+                {item.icon}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -1144,6 +1223,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  titleActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  askAiButton: {
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9,
+  },
+
+  askAiText: {
+    color: "#111111",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
   shareButton: {
     backgroundColor: "#107c68",
     paddingHorizontal: 14,
@@ -1225,6 +1323,58 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
 
+  dataSourceMenu: {
+    position: "absolute",
+    top: 140,
+    left: 168,
+    width: 250,
+    backgroundColor: "#252525",
+    borderWidth: 1,
+    borderColor: "#343434",
+    paddingVertical: 10,
+    zIndex: 20,
+    shadowColor: "#000000",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+
+  dataSourceMenuTitle: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "800",
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+
+  dataSourceItem: {
+    minHeight: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+  },
+
+  dataSourceIcon: {
+    width: 24,
+    height: 24,
+    borderWidth: 1,
+    borderColor: "#5c5c5c",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+
+  dataSourceIconText: {
+    color: "#dcecff",
+    fontSize: 8,
+    fontWeight: "800",
+  },
+
+  dataSourceText: {
+    color: "#f2f2f2",
+    fontSize: 12,
+  },
+
   workspace: {
     flex: 1,
     flexDirection: "row",
@@ -1274,6 +1424,10 @@ const styles = StyleSheet.create({
     color: "#f5f5f5",
     fontSize: 12,
     fontWeight: "700",
+  },
+
+  railLongIcon: {
+    fontSize: 8,
   },
 
   reportArea: {
