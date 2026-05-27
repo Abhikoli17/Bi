@@ -301,6 +301,11 @@ export default function DashboardBuilder() {
   const [datasets, setDatasets] = useState<any[]>(demoDatasets);
   const [selectedDataset, setSelectedDataset] = useState<any>(demoDatasets[0]);
   const [dashboardName, setDashboardName] = useState("My Dashboard");
+  const [activeRail, setActiveRail] = useState("Report");
+  const [dataSearch, setDataSearch] = useState("");
+  const [filterSearch, setFilterSearch] = useState("");
+  const [pageFilterFields, setPageFilterFields] = useState<string[]>([]);
+  const [allPageFilterFields, setAllPageFilterFields] = useState<string[]>([]);
 
   const selectedFields = useMemo(
     () => (selectedDataset?.columns?.length ? selectedDataset.columns : fallbackFields),
@@ -344,6 +349,32 @@ export default function DashboardBuilder() {
 
   const defaultValueField = numericFields[0] ?? "Revenue";
   const defaultXField = categoryFields[0] ?? selectedFields[0]?.name ?? "Date";
+  const filteredDatasets = useMemo(
+    () =>
+      datasets.filter((dataset: any) =>
+        dataset.name.toLowerCase().includes(dataSearch.trim().toLowerCase())
+      ),
+    [dataSearch, datasets]
+  );
+  const visibleFields = useMemo(
+    () =>
+      selectedFields.filter((field: any) =>
+        field.name.toLowerCase().includes(dataSearch.trim().toLowerCase())
+      ),
+    [dataSearch, selectedFields]
+  );
+  const filteredRows = useMemo(() => {
+    const activeFilters = [...pageFilterFields, ...allPageFilterFields];
+
+    if (!activeFilters.length) return datasetRows;
+
+    return datasetRows.filter((row: any) =>
+      activeFilters.every((fieldName) => {
+        const value = row[fieldName];
+        return value !== undefined && value !== null && String(value).trim() !== "";
+      })
+    );
+  }, [allPageFilterFields, datasetRows, pageFilterFields]);
   const zoomScale = zoomPercent / 100;
   const zoomThumbOffset = ((zoomPercent - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 86;
   const zoomFrameStyle = {
@@ -510,6 +541,13 @@ export default function DashboardBuilder() {
   };
 
   const selectDataSource = (source: string) => {
+    if (source === "More...") {
+      setDataMenuOpen(false);
+      setDataCollapsed(false);
+      Alert.alert("More data sources", "Demo sources are available in the Data pane.");
+      return;
+    }
+
     const sourceDataset =
       source === "Excel workbook" || source === "Text/CSV"
         ? demoDatasets[2]
@@ -519,15 +557,98 @@ export default function DashboardBuilder() {
 
     setDatasets(demoDatasets);
     setSelectedDataset(sourceDataset);
+    setPageFilterFields([]);
+    setAllPageFilterFields([]);
     setDataMenuOpen(false);
     Alert.alert(source, `${sourceDataset.name} is loaded in the Data pane.`);
   };
 
   const askAi = () => {
-    Alert.alert(
-      "Ask AI",
-      "Try adding a visual, then select fields like Revenue, Region, Date, or Quantity."
-    );
+    const prefix = Date.now();
+    const aiWidgets: Widget[] = [
+      {
+        id: `ai-kpi-${prefix}`,
+        pageId: activePageId,
+        type: "kpi",
+        title: `Total ${defaultValueField}`,
+        valueField: defaultValueField,
+        layout: { x: 0, y: 0, w: 3, h: 2 },
+      },
+      {
+        id: `ai-bar-${prefix}`,
+        pageId: activePageId,
+        type: "bar",
+        title: `${defaultValueField} by ${defaultXField}`,
+        xField: defaultXField,
+        valueField: defaultValueField,
+        layout: { x: 3, y: 0, w: 5, h: 3 },
+      },
+      {
+        id: `ai-line-${prefix}`,
+        pageId: activePageId,
+        type: "line",
+        title: `${defaultValueField} Trend`,
+        xField: categoryFields.includes("Date") ? "Date" : defaultXField,
+        valueField: defaultValueField,
+        layout: { x: 0, y: 3, w: 5, h: 3 },
+      },
+      {
+        id: `ai-pie-${prefix}`,
+        pageId: activePageId,
+        type: "pie",
+        title: `${defaultValueField} Share`,
+        xField: defaultXField,
+        valueField: defaultValueField,
+        layout: { x: 5, y: 3, w: 4, h: 3 },
+      },
+    ];
+
+    setWidgets((prev) => [
+      ...prev.filter((widget) => widget.pageId !== activePageId),
+      ...aiWidgets,
+    ]);
+    setSelectedWidgetId(aiWidgets[0].id);
+    setVisualsCollapsed(false);
+    Alert.alert("Ask AI", "A starter report has been created for this page.");
+  };
+
+  const addFilterField = (scope: "page" | "all") => {
+    const fieldName =
+      selectedWidget?.xField ?? selectedWidget?.valueField ?? defaultXField ?? defaultValueField;
+
+    if (!fieldName) return;
+
+    if (scope === "page") {
+      setPageFilterFields((prev) => (prev.includes(fieldName) ? prev : [...prev, fieldName]));
+      return;
+    }
+
+    setAllPageFilterFields((prev) => (prev.includes(fieldName) ? prev : [...prev, fieldName]));
+  };
+
+  const removeFilterField = (scope: "page" | "all", fieldName: string) => {
+    if (scope === "page") {
+      setPageFilterFields((prev) => prev.filter((field) => field !== fieldName));
+      return;
+    }
+
+    setAllPageFilterFields((prev) => prev.filter((field) => field !== fieldName));
+  };
+
+  const handleRailPress = (rail: string) => {
+    setActiveRail(rail);
+
+    if (rail === "Report") return;
+    if (rail === "Data") {
+      setDataCollapsed(false);
+      return;
+    }
+    if (rail === "Model") {
+      setActiveTab("Modeling");
+      return;
+    }
+
+    Alert.alert(rail, `${rail} view is available as a prototype panel.`);
   };
 
   const handleRibbonAction = (item: string) => {
@@ -578,9 +699,9 @@ export default function DashboardBuilder() {
       "Mobile layout": () => Alert.alert("Mobile layout", "Demo mode: mobile layout preview."),
       Gridlines: () => Alert.alert("Gridlines", "The dotted report boundary is enabled."),
       "Snap to grid": () => Alert.alert("Snap to grid", "Grid snapping is enabled."),
-      Filters: () => Alert.alert("Filters", "Filters pane is visible."),
+      Filters: () => setFiltersCollapsed((collapsed) => !collapsed),
       Bookmarks: () => Alert.alert("Bookmarks", "Demo mode: bookmarks pane opened."),
-      Selection: () => Alert.alert("Selection", "Click visuals to select them on canvas."),
+      Selection: () => setVisualsCollapsed(false),
       "Performance analyzer": () =>
         Alert.alert("Performance analyzer", `${activePageWidgets.length} visuals rendered.`),
       "Sync slicers": () => Alert.alert("Sync slicers", "Demo mode: slicers synced."),
@@ -630,7 +751,7 @@ export default function DashboardBuilder() {
 
     if (!xField || !valueField) return sampleData;
 
-    const grouped = datasetRows.reduce((acc: Record<string, number>, row: any) => {
+    const grouped = filteredRows.reduce((acc: Record<string, number>, row: any) => {
       const key = String(row[xField] ?? "Blank");
       const value = Number(row[valueField] ?? 0);
       acc[key] = (acc[key] ?? 0) + (Number.isNaN(value) ? 0 : value);
@@ -649,7 +770,7 @@ export default function DashboardBuilder() {
       widget.valueField && fieldNames.includes(widget.valueField)
         ? widget.valueField
         : defaultValueField;
-    const total = datasetRows.reduce((sum: number, row: any) => {
+    const total = filteredRows.reduce((sum: number, row: any) => {
       const value = Number(row[valueField] ?? 0);
       return sum + (Number.isNaN(value) ? 0 : value);
     }, 0);
@@ -851,7 +972,11 @@ export default function DashboardBuilder() {
           {leftRailItems.map((item, index) => (
             <TouchableOpacity
               key={item.label}
-              style={[styles.railItem, index === 0 && styles.activeRailItem]}
+              style={[
+                styles.railItem,
+                activeRail === item.label && styles.activeRailItem,
+              ]}
+              onPress={() => handleRailPress(item.label)}
             >
               <Text
                 style={[
@@ -996,6 +1121,8 @@ export default function DashboardBuilder() {
             <TextInput
               placeholder="Search"
               placeholderTextColor="#555555"
+              value={filterSearch}
+              onChangeText={setFilterSearch}
               style={styles.filterSearch}
             />
 
@@ -1004,8 +1131,27 @@ export default function DashboardBuilder() {
                 <Text style={styles.filterBlockTitle}>Filters on this page</Text>
                 <Text style={styles.filterDots}>...</Text>
               </View>
-              <TouchableOpacity style={styles.filterDropZone}>
-                <Text style={styles.filterDropText}>Add data fields here</Text>
+              <TouchableOpacity
+                style={styles.filterDropZone}
+                onPress={() => addFilterField("page")}
+              >
+                {pageFilterFields.length ? (
+                  pageFilterFields
+                    .filter((field) =>
+                      field.toLowerCase().includes(filterSearch.trim().toLowerCase())
+                    )
+                    .map((field) => (
+                      <TouchableOpacity
+                        key={field}
+                        style={styles.filterChip}
+                        onPress={() => removeFilterField("page", field)}
+                      >
+                        <Text style={styles.filterChipText}>{field} x</Text>
+                      </TouchableOpacity>
+                    ))
+                ) : (
+                  <Text style={styles.filterDropText}>Add data fields here</Text>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -1014,8 +1160,27 @@ export default function DashboardBuilder() {
                 <Text style={styles.filterBlockTitle}>Filters on all pages</Text>
                 <Text style={styles.filterDots}>...</Text>
               </View>
-              <TouchableOpacity style={styles.filterDropZone}>
-                <Text style={styles.filterDropText}>Add data fields here</Text>
+              <TouchableOpacity
+                style={styles.filterDropZone}
+                onPress={() => addFilterField("all")}
+              >
+                {allPageFilterFields.length ? (
+                  allPageFilterFields
+                    .filter((field) =>
+                      field.toLowerCase().includes(filterSearch.trim().toLowerCase())
+                    )
+                    .map((field) => (
+                      <TouchableOpacity
+                        key={field}
+                        style={styles.filterChip}
+                        onPress={() => removeFilterField("all", field)}
+                      >
+                        <Text style={styles.filterChipText}>{field} x</Text>
+                      </TouchableOpacity>
+                    ))
+                ) : (
+                  <Text style={styles.filterDropText}>Add data fields here</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1607,6 +1772,21 @@ const styles = StyleSheet.create({
   filterDropText: {
     color: "#555555",
     fontSize: 12,
+  },
+
+  filterChip: {
+    backgroundColor: "#efefef",
+    borderWidth: 1,
+    borderColor: "#bdbdbd",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    margin: 3,
+  },
+
+  filterChipText: {
+    color: "#222222",
+    fontSize: 11,
+    fontWeight: "700",
   },
 
   rightPanes: {
