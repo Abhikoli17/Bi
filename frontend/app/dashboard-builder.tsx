@@ -73,6 +73,7 @@ const REPORT_STAGE_STYLE = {
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 150;
 const ZOOM_STEP = 10;
+const SAVED_DATASETS_KEY = "dashboardBuilder.savedDatasets";
 
 const GRID_ITEM_STYLE = {
   height: "100%",
@@ -309,6 +310,7 @@ export default function DashboardBuilder() {
   const [filterSearch, setFilterSearch] = useState("");
   const [pageFilterFields, setPageFilterFields] = useState<string[]>([]);
   const [allPageFilterFields, setAllPageFilterFields] = useState<string[]>([]);
+  const [savedDatasetIds, setSavedDatasetIds] = useState<string[]>([]);
 
   const selectedFields = useMemo(
     () => (selectedDataset?.columns?.length ? selectedDataset.columns : fallbackFields),
@@ -352,19 +354,29 @@ export default function DashboardBuilder() {
 
   const defaultValueField = numericFields[0] ?? "Revenue";
   const defaultXField = categoryFields[0] ?? selectedFields[0]?.name ?? "Date";
-  const filteredDatasets = useMemo(
+  const uploadedDatasets = useMemo(
+    () => datasets.filter((dataset: any) => String(dataset._id).startsWith("uploaded-")),
+    [datasets]
+  );
+  const filteredUploadedDatasets = useMemo(
     () =>
-      datasets.filter((dataset: any) =>
+      uploadedDatasets.filter((dataset: any) =>
         dataset.name.toLowerCase().includes(dataSearch.trim().toLowerCase())
       ),
-    [dataSearch, datasets]
+    [dataSearch, uploadedDatasets]
   );
+  const selectedDatasetIsUploaded =
+    selectedDataset?._id && String(selectedDataset._id).startsWith("uploaded-");
+  const selectedDatasetIsSaved =
+    selectedDataset?._id && savedDatasetIds.includes(selectedDataset._id);
   const visibleFields = useMemo(
     () =>
-      selectedFields.filter((field: any) =>
-        field.name.toLowerCase().includes(dataSearch.trim().toLowerCase())
-      ),
-    [dataSearch, selectedFields]
+      selectedDatasetIsUploaded
+        ? selectedFields.filter((field: any) =>
+            field.name.toLowerCase().includes(dataSearch.trim().toLowerCase())
+          )
+        : [],
+    [dataSearch, selectedDatasetIsUploaded, selectedFields]
   );
   const filteredRows = useMemo(() => {
     const activeFilters = [...pageFilterFields, ...allPageFilterFields];
@@ -410,6 +422,31 @@ export default function DashboardBuilder() {
       loadDatasets();
     }
   }, [loadDatasets, token]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(SAVED_DATASETS_KEY);
+
+      if (!saved) return;
+
+      const savedDatasets = JSON.parse(saved);
+
+      if (!Array.isArray(savedDatasets) || !savedDatasets.length) return;
+
+      setDatasets((prev) => {
+        const existingIds = new Set(prev.map((dataset: any) => dataset._id));
+        const restored = savedDatasets.filter(
+          (dataset: any) => dataset?._id && !existingIds.has(dataset._id)
+        );
+
+        return [...restored, ...prev];
+      });
+      setSavedDatasetIds(savedDatasets.map((dataset: any) => dataset._id));
+      setSelectedDataset(savedDatasets[0]);
+    } catch {
+      window.localStorage.removeItem(SAVED_DATASETS_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedWidget?.pageId === activePageId) return;
@@ -537,6 +574,51 @@ export default function DashboardBuilder() {
     );
   };
 
+  const persistSavedDatasets = (nextSavedIds: string[], nextDatasets = datasets) => {
+    const savedDatasets = nextDatasets.filter((dataset: any) =>
+      nextSavedIds.includes(dataset._id)
+    );
+
+    window.localStorage.setItem(SAVED_DATASETS_KEY, JSON.stringify(savedDatasets));
+    setSavedDatasetIds(nextSavedIds);
+  };
+
+  const saveSelectedDataset = () => {
+    if (!selectedDatasetIsUploaded) {
+      Alert.alert("Select uploaded data", "Upload or select a file before saving data.");
+      return;
+    }
+
+    const nextSavedIds = savedDatasetIds.includes(selectedDataset._id)
+      ? savedDatasetIds
+      : [...savedDatasetIds, selectedDataset._id];
+
+    persistSavedDatasets(nextSavedIds);
+    Alert.alert("Data saved", `${selectedDataset.name} will be restored next time.`);
+  };
+
+  const deleteSelectedDataset = () => {
+    if (!selectedDatasetIsUploaded) {
+      Alert.alert("Select uploaded data", "Only uploaded datasets can be deleted here.");
+      return;
+    }
+
+    const nextDatasets = datasets.filter(
+      (dataset: any) => dataset._id !== selectedDataset._id
+    );
+    const nextSavedIds = savedDatasetIds.filter((id) => id !== selectedDataset._id);
+    const nextUploadedDataset = nextDatasets.find((dataset: any) =>
+      String(dataset._id).startsWith("uploaded-")
+    );
+
+    setDatasets(nextDatasets);
+    setSelectedDataset(nextUploadedDataset ?? demoDatasets[0]);
+    setPageFilterFields([]);
+    setAllPageFilterFields([]);
+    persistSavedDatasets(nextSavedIds, nextDatasets);
+    Alert.alert("Data deleted", `${selectedDataset.name} was removed from the Data pane.`);
+  };
+
   const resetDemoData = () => {
     setDatasets(demoDatasets);
     setSelectedDataset(demoDatasets[0]);
@@ -587,7 +669,10 @@ export default function DashboardBuilder() {
       setPageFilterFields([]);
       setAllPageFilterFields([]);
       setDataSearch("");
-      Alert.alert("Data loaded", `${file.name} was added to the Data pane.`);
+      Alert.alert(
+        "Data loaded",
+        `${file.name} was added to the Data pane. Save it if you want it restored later.`
+      );
     } catch {
       Alert.alert("Upload failed", "Please choose a valid Excel or CSV file.");
     } finally {
@@ -1296,21 +1381,32 @@ export default function DashboardBuilder() {
               ))}
             </View>
 
-            <Text style={styles.visualHint}>
-              Click a visual icon to add it to this page.
-            </Text>
+            <View style={styles.valuesSection}>
+              <Text style={styles.dropZoneTitle}>Values</Text>
+              <TouchableOpacity style={styles.valuesDropZone}>
+                <Text style={styles.dropZoneText}>
+                  {selectedWidget?.valueField ?? "Add data fields here"}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            <View style={styles.dropZone}>
-              <Text style={styles.dropZoneTitle}>Selected visual</Text>
-              <Text style={styles.dropZoneText}>
-                {selectedWidget?.title ?? "Select a visual"}
-              </Text>
-              <Text style={styles.dropZoneText}>
-                Axis: {selectedWidget?.xField ?? "None"}
-              </Text>
-              <Text style={styles.dropZoneText}>
-                Values: {selectedWidget?.valueField ?? "None"}
-              </Text>
+            <View style={styles.drillSection}>
+              <Text style={styles.dropZoneTitle}>Drill through</Text>
+              <View style={styles.toggleRow}>
+                <Text style={styles.dropZoneText}>Cross-report</Text>
+                <View style={styles.toggleOff}>
+                  <Text style={styles.toggleText}>Off</Text>
+                </View>
+              </View>
+              <View style={styles.toggleRow}>
+                <Text style={styles.dropZoneText}>Keep all filters</Text>
+                <View style={styles.toggleOn}>
+                  <Text style={styles.toggleText}>On</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.valuesDropZone}>
+                <Text style={styles.dropZoneText}>Add drill-through fields here</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.visualActions}>
@@ -1356,52 +1452,78 @@ export default function DashboardBuilder() {
               style={styles.dataSearch}
             />
 
-            <TextInput
-              value={dashboardName}
-              onChangeText={setDashboardName}
-              placeholder="Dashboard Name"
-              placeholderTextColor="#777"
-              style={styles.nameInput}
-            />
-
             <ScrollView style={styles.datasetList}>
-              {filteredDatasets.map((dataset: any) => (
-                <TouchableOpacity
-                  key={dataset._id}
-                  style={[
-                    styles.datasetItem,
-                    selectedDataset?._id === dataset._id &&
-                      styles.selectedDataset,
-                  ]}
-                  onPress={() => setSelectedDataset(dataset)}
-                >
-                  <Text style={styles.datasetText}>{dataset.name}</Text>
-                </TouchableOpacity>
-              ))}
+              {filteredUploadedDatasets.length ? (
+                filteredUploadedDatasets.map((dataset: any) => (
+                  <TouchableOpacity
+                    key={dataset._id}
+                    style={[
+                      styles.datasetItem,
+                      selectedDataset?._id === dataset._id &&
+                        styles.selectedDataset,
+                    ]}
+                    onPress={() => setSelectedDataset(dataset)}
+                  >
+                    <Text style={styles.datasetText}>{dataset.name}</Text>
+                    {savedDatasetIds.includes(dataset._id) && (
+                      <Text style={styles.savedBadge}>Saved</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.emptyDataText}>
+                  Upload Excel or CSV data from Get data.
+                </Text>
+              )}
             </ScrollView>
 
-            <ScrollView style={styles.fieldsList}>
-              {visibleFields.map((col: any) => (
-                <TouchableOpacity
-                  key={col.name}
-                  style={styles.fieldItem}
-                  onPress={() => assignFieldToSelectedVisual(col.name)}
-                >
-                  <View
+            {selectedDatasetIsUploaded && (
+              <>
+                <ScrollView style={styles.fieldsList}>
+                  {visibleFields.map((col: any) => (
+                    <TouchableOpacity
+                      key={col.name}
+                      style={styles.fieldItem}
+                      onPress={() => assignFieldToSelectedVisual(col.name)}
+                    >
+                      <View
+                        style={[
+                          styles.fieldCheckbox,
+                          (selectedWidget?.xField === col.name ||
+                            selectedWidget?.valueField === col.name) &&
+                            styles.checkedField,
+                        ]}
+                      />
+                      <Text style={styles.fieldText}>{col.name}</Text>
+                      <Text style={styles.fieldType}>
+                        {numericFields.includes(col.name) ? "123" : "abc"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <View style={styles.dataActions}>
+                  <TouchableOpacity
                     style={[
-                      styles.fieldCheckbox,
-                      (selectedWidget?.xField === col.name ||
-                        selectedWidget?.valueField === col.name) &&
-                        styles.checkedField,
+                      styles.dataActionButton,
+                      selectedDatasetIsSaved && styles.savedDataButton,
                     ]}
-                  />
-                  <Text style={styles.fieldText}>{col.name}</Text>
-                  <Text style={styles.fieldType}>
-                    {numericFields.includes(col.name) ? "123" : "abc"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                    onPress={saveSelectedDataset}
+                  >
+                    <Text style={styles.dataActionText}>
+                      {selectedDatasetIsSaved ? "Saved" : "Save Data"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.dataActionButton, styles.deleteDataButton]}
+                    onPress={deleteSelectedDataset}
+                  >
+                    <Text style={styles.dataActionText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
 
             <TouchableOpacity style={styles.saveButton} onPress={saveDashboard}>
               <Text style={styles.saveButtonText}>Save Dashboard</Text>
@@ -2021,6 +2143,60 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
 
+  valuesSection: {
+    borderTopWidth: 1,
+    borderTopColor: "#5a5a5a",
+    paddingTop: 10,
+    marginTop: 8,
+  },
+
+  valuesDropZone: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#5a5a5a",
+    padding: 8,
+    minHeight: 32,
+    justifyContent: "center",
+  },
+
+  drillSection: {
+    borderTopWidth: 1,
+    borderTopColor: "#2f2f2f",
+    paddingTop: 10,
+    marginTop: 10,
+    gap: 8,
+  },
+
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  toggleOff: {
+    minWidth: 34,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: "#404040",
+    alignItems: "center",
+  },
+
+  toggleOn: {
+    minWidth: 34,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: "#00b294",
+    alignItems: "center",
+  },
+
+  toggleText: {
+    color: "#ffffff",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+
   dropZoneTitle: {
     color: "#ffffff",
     fontWeight: "700",
@@ -2091,6 +2267,9 @@ const styles = StyleSheet.create({
     padding: 9,
     borderRadius: 3,
     marginBottom: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 
   selectedDataset: {
@@ -2100,6 +2279,49 @@ const styles = StyleSheet.create({
   datasetText: {
     color: "#ffffff",
     fontSize: 12,
+    flex: 1,
+  },
+
+  savedBadge: {
+    color: "#9ff5df",
+    fontSize: 10,
+    fontWeight: "800",
+    marginLeft: 8,
+  },
+
+  emptyDataText: {
+    color: "#8f8f8f",
+    fontSize: 12,
+    lineHeight: 18,
+    paddingVertical: 12,
+  },
+
+  dataActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+
+  dataActionButton: {
+    flex: 1,
+    backgroundColor: "#107c68",
+    paddingVertical: 8,
+    borderRadius: 3,
+    alignItems: "center",
+  },
+
+  savedDataButton: {
+    backgroundColor: "#24524a",
+  },
+
+  deleteDataButton: {
+    backgroundColor: "#5a1f1f",
+  },
+
+  dataActionText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "800",
   },
 
   fieldsList: {
