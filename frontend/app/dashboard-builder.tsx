@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -24,6 +24,7 @@ import {
 } from "recharts";
 
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
+import * as XLSX from "xlsx";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -35,6 +36,7 @@ declare global {
   namespace JSX {
     interface IntrinsicElements {
       div: any;
+      input: any;
     }
   }
 }
@@ -257,6 +259,7 @@ const formatNumber = (value: number) =>
 
 export default function DashboardBuilder() {
   const { token } = useAuthStore();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState("Home");
   const [selectedWidgetId, setSelectedWidgetId] = useState("kpi1");
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
@@ -540,7 +543,64 @@ export default function DashboardBuilder() {
     Alert.alert("Demo data loaded", "The sample datasets are ready to use.");
   };
 
+  const openFilePicker = () => {
+    setDataMenuOpen(false);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+        defval: "",
+      });
+
+      if (!rows.length) {
+        Alert.alert("No data found", "The selected file does not contain rows.");
+        return;
+      }
+
+      const columnNames = Array.from(
+        rows.reduce((columns, row) => {
+          Object.keys(row).forEach((key) => columns.add(key));
+          return columns;
+        }, new Set<string>())
+      );
+
+      const uploadedDataset = {
+        _id: `uploaded-${Date.now()}`,
+        name: file.name.replace(/\.[^.]+$/, "") || "Uploaded data",
+        columns: columnNames.map((name) => ({ name })),
+        rows,
+      };
+
+      setDatasets((prev) => [uploadedDataset, ...prev]);
+      setSelectedDataset(uploadedDataset);
+      setDataCollapsed(false);
+      setPageFilterFields([]);
+      setAllPageFilterFields([]);
+      setDataSearch("");
+      Alert.alert("Data loaded", `${file.name} was added to the Data pane.`);
+    } catch {
+      Alert.alert("Upload failed", "Please choose a valid Excel or CSV file.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   const selectDataSource = (source: string) => {
+    if (source === "Excel workbook" || source === "Text/CSV") {
+      openFilePicker();
+      return;
+    }
+
     if (source === "More...") {
       setDataMenuOpen(false);
       setDataCollapsed(false);
@@ -663,7 +723,7 @@ export default function DashboardBuilder() {
       Save: saveDashboard,
       Export: saveDashboard,
       "Get data": () => setDataMenuOpen((open) => !open),
-      Excel: resetDemoData,
+      Excel: openFilePicker,
       "SQL Server": resetDemoData,
       "Enter data": resetDemoData,
       "Transform data": () =>
@@ -878,6 +938,14 @@ export default function DashboardBuilder() {
 
   return (
     <View style={styles.page}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        style={{ display: "none" }}
+        onChange={handleFileUpload}
+      />
+
       <View style={styles.titleBar}>
         <View style={styles.tabs}>
           {["File", "Home", "Insert", "Modeling", "View", "Optimize", "Help"].map(
@@ -1283,6 +1351,8 @@ export default function DashboardBuilder() {
             <TextInput
               placeholder="Search"
               placeholderTextColor="#888888"
+              value={dataSearch}
+              onChangeText={setDataSearch}
               style={styles.dataSearch}
             />
 
@@ -1295,7 +1365,7 @@ export default function DashboardBuilder() {
             />
 
             <ScrollView style={styles.datasetList}>
-              {datasets.map((dataset: any) => (
+              {filteredDatasets.map((dataset: any) => (
                 <TouchableOpacity
                   key={dataset._id}
                   style={[
@@ -1311,7 +1381,7 @@ export default function DashboardBuilder() {
             </ScrollView>
 
             <ScrollView style={styles.fieldsList}>
-              {selectedFields.map((col: any) => (
+              {visibleFields.map((col: any) => (
                 <TouchableOpacity
                   key={col.name}
                   style={styles.fieldItem}

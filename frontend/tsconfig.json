@@ -13,8 +13,6 @@
 
     "baseUrl": ".",
 
-    "ignoreDeprecations": "6.0",
-
     "types": ["react", "react-dom", "react-native"]
   },
   "include": ["**/*.ts", "**/*.tsx"]
