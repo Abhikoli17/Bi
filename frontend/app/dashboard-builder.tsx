@@ -10,6 +10,8 @@ import {
 } from "react-native";
 
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   Cell,
@@ -41,7 +43,35 @@ declare global {
   }
 }
 
-type WidgetType = "kpi" | "bar" | "line" | "pie";
+type WidgetType =
+  | "stacked-bar"
+  | "stacked-column"
+  | "area"
+  | "clustered-bar"
+  | "clustered-column"
+  | "hundred-bar"
+  | "hundred-column"
+  | "line"
+  | "stacked-area"
+  | "hundred-area"
+  | "line-stacked-column"
+  | "line-clustered-column"
+  | "ribbon"
+  | "waterfall"
+  | "funnel"
+  | "scatter"
+  | "pie"
+  | "donut"
+  | "treemap"
+  | "map"
+  | "filled-map"
+  | "shape-map"
+  | "card"
+  | "kpi"
+  | "slicer"
+  | "table"
+  | "matrix"
+  | "decomposition-tree";
 
 interface Widget {
   id: string;
@@ -165,18 +195,34 @@ const visualButtons: {
   label: string;
   type: WidgetType;
 }[] = [
-  { icon: "BAR", label: "Bar", type: "bar" },
+  { icon: "SB", label: "Stacked bar", type: "stacked-bar" },
+  { icon: "SC", label: "Stacked column", type: "stacked-column" },
+  { icon: "AR", label: "Area", type: "area" },
+  { icon: "CB", label: "Clustered bar", type: "clustered-bar" },
+  { icon: "CC", label: "Clustered column", type: "clustered-column" },
+  { icon: "100B", label: "100% bar", type: "hundred-bar" },
+  { icon: "100C", label: "100% column", type: "hundred-column" },
   { icon: "LIN", label: "Line", type: "line" },
+  { icon: "SA", label: "Stacked area", type: "stacked-area" },
+  { icon: "100A", label: "100% area", type: "hundred-area" },
+  { icon: "LSC", label: "Line + stacked", type: "line-stacked-column" },
+  { icon: "LCC", label: "Line + column", type: "line-clustered-column" },
+  { icon: "RIB", label: "Ribbon", type: "ribbon" },
+  { icon: "WF", label: "Waterfall", type: "waterfall" },
+  { icon: "FUN", label: "Funnel", type: "funnel" },
+  { icon: "SCT", label: "Scatter", type: "scatter" },
   { icon: "PIE", label: "Pie", type: "pie" },
-  { icon: "123", label: "KPI", type: "kpi" },
-  { icon: "COL", label: "Column", type: "bar" },
-  { icon: "STK", label: "Stack", type: "bar" },
-  { icon: "ARE", label: "Area", type: "line" },
-  { icon: "DON", label: "Donut", type: "pie" },
-  { icon: "TBL", label: "Table", type: "kpi" },
-  { icon: "MAP", label: "Map", type: "pie" },
-  { icon: "SC", label: "Scatter", type: "bar" },
-  { icon: "R", label: "R", type: "line" },
+  { icon: "DON", label: "Donut", type: "donut" },
+  { icon: "TRE", label: "Treemap", type: "treemap" },
+  { icon: "MAP", label: "Map", type: "map" },
+  { icon: "FM", label: "Filled map", type: "filled-map" },
+  { icon: "SM", label: "Shape map", type: "shape-map" },
+  { icon: "123", label: "Card", type: "card" },
+  { icon: "KPI", label: "KPI", type: "kpi" },
+  { icon: "SLC", label: "Slicer", type: "slicer" },
+  { icon: "TBL", label: "Table", type: "table" },
+  { icon: "MAT", label: "Matrix", type: "matrix" },
+  { icon: "DEC", label: "Decomposition", type: "decomposition-tree" },
 ];
 
 const dataSourceOptions = [
@@ -201,6 +247,43 @@ const leftRailItems = [
   { label: "DAX", icon: "DAX" },
   { label: "TMDL", icon: "TMDL" },
 ];
+
+const visualTitles: Record<WidgetType, string> = {
+  "stacked-bar": "Stacked Bar Chart",
+  "stacked-column": "Stacked Column Chart",
+  area: "Area Chart",
+  "clustered-bar": "Clustered Bar Chart",
+  "clustered-column": "Clustered Column Chart",
+  "hundred-bar": "100% Clustered Bar Chart",
+  "hundred-column": "100% Clustered Column Chart",
+  line: "Line Chart",
+  "stacked-area": "Stacked Area Chart",
+  "hundred-area": "100% Stacked Area Chart",
+  "line-stacked-column": "Line and Stacked Column Chart",
+  "line-clustered-column": "Line and Clustered Column Chart",
+  ribbon: "Ribbon Chart",
+  waterfall: "Waterfall Chart",
+  funnel: "Funnel",
+  scatter: "Scatter Chart",
+  pie: "Pie Chart",
+  donut: "Donut Chart",
+  treemap: "Treemap",
+  map: "Map",
+  "filled-map": "Filled Map",
+  "shape-map": "Shape Map",
+  card: "Card",
+  kpi: "KPI",
+  slicer: "Slicer",
+  table: "Table",
+  matrix: "Matrix",
+  "decomposition-tree": "Decomposition Tree",
+};
+
+const kpiVisualTypes: WidgetType[] = ["kpi", "card"];
+const areaVisualTypes: WidgetType[] = ["area", "stacked-area", "hundred-area"];
+const lineVisualTypes: WidgetType[] = ["line"];
+const pieVisualTypes: WidgetType[] = ["pie", "donut", "treemap", "map", "filled-map", "shape-map"];
+const tableVisualTypes: WidgetType[] = ["table", "matrix", "slicer", "decomposition-tree"];
 
 const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
   File: [
@@ -294,7 +377,7 @@ export default function DashboardBuilder() {
     {
       id: "bar1",
       pageId: "page-1",
-      type: "bar",
+      type: "clustered-column",
       title: "Sales by Category",
       xField: "Region",
       valueField: "Revenue",
@@ -481,13 +564,8 @@ export default function DashboardBuilder() {
   };
 
   const addWidget = (type: WidgetType) => {
-    const titles: Record<WidgetType, string> = {
-      kpi: "Total Revenue",
-      bar: "Clustered Bar Chart",
-      line: "Line Chart",
-      pie: "Pie Chart",
-    };
     const id = `${type}-${Date.now()}`;
+    const isKpiLike = kpiVisualTypes.includes(type);
 
     setWidgets((prev) => [
       ...prev,
@@ -495,8 +573,8 @@ export default function DashboardBuilder() {
         id,
         pageId: activePageId,
         type,
-        title: titles[type],
-        xField: type === "kpi" ? undefined : defaultXField,
+        title: visualTitles[type],
+        xField: isKpiLike ? undefined : defaultXField,
         valueField: defaultValueField,
         layout: createLayout(type, activePageWidgets.length),
       },
@@ -547,7 +625,7 @@ export default function DashboardBuilder() {
       prev.map((widget) => {
         if (widget.id !== selectedWidget.id) return widget;
 
-        if (widget.type === "kpi") {
+        if (kpiVisualTypes.includes(widget.type)) {
           return {
             ...widget,
             valueField: isNumeric ? fieldName : widget.valueField ?? defaultValueField,
@@ -714,7 +792,7 @@ export default function DashboardBuilder() {
       {
         id: `ai-kpi-${prefix}`,
         pageId: activePageId,
-        type: "kpi",
+        type: "card",
         title: `Total ${defaultValueField}`,
         valueField: defaultValueField,
         layout: { x: 0, y: 0, w: 3, h: 2 },
@@ -722,7 +800,7 @@ export default function DashboardBuilder() {
       {
         id: `ai-bar-${prefix}`,
         pageId: activePageId,
-        type: "bar",
+        type: "clustered-column",
         title: `${defaultValueField} by ${defaultXField}`,
         xField: defaultXField,
         valueField: defaultValueField,
@@ -814,15 +892,15 @@ export default function DashboardBuilder() {
       "Transform data": () =>
         Alert.alert("Transform data", "Demo mode: fields are ready in the Data pane."),
       Refresh: loadDatasets,
-      "New visual": () => addWidget("bar"),
-      "Bar chart": () => addWidget("bar"),
+      "New visual": () => addWidget("clustered-column"),
+      "Bar chart": () => addWidget("clustered-bar"),
       "Line chart": () => addWidget("line"),
       "Pie chart": () => addWidget("pie"),
-      "Text box": () => addWidget("kpi"),
+      "Text box": () => addWidget("card"),
       "More visuals": () => addWidget("pie"),
-      "Key influencers": () => addWidget("bar"),
-      "Decomposition tree": () => addWidget("pie"),
-      Narrative: () => addWidget("kpi"),
+      "Key influencers": () => addWidget("decomposition-tree"),
+      "Decomposition tree": () => addWidget("decomposition-tree"),
+      Narrative: () => addWidget("card"),
       Buttons: () => Alert.alert("Button added", "Demo mode: button controls can be mocked here."),
       Shapes: () => Alert.alert("Shape added", "Demo mode: shape controls can be mocked here."),
       Image: () => Alert.alert("Image added", "Demo mode: image controls can be mocked here."),
@@ -930,20 +1008,43 @@ export default function DashboardBuilder() {
   const renderChart = (widget: Widget) => {
     const data = getVisualData(widget);
 
-    if (widget.type === "bar") {
+    if (tableVisualTypes.includes(widget.type)) {
+      return (
+        <View style={styles.tableVisual}>
+          <View style={styles.tableHeader}>
+            <Text style={styles.tableHeaderText}>{widget.xField ?? defaultXField}</Text>
+            <Text style={styles.tableHeaderText}>{widget.valueField ?? defaultValueField}</Text>
+          </View>
+          {data.slice(0, 6).map((row: { name: string; value: number }) => (
+            <View key={row.name} style={styles.tableRow}>
+              <Text style={styles.tableCellText}>{row.name}</Text>
+              <Text style={styles.tableCellText}>{formatNumber(row.value)}</Text>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    if (areaVisualTypes.includes(widget.type)) {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
+          <AreaChart data={data}>
             <XAxis dataKey="name" stroke="#6b7280" fontSize={11} />
             <YAxis stroke="#6b7280" fontSize={11} />
             <Tooltip />
-            <Bar dataKey="value" fill="#118dff" radius={[3, 3, 0, 0]} />
-          </BarChart>
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="#118dff"
+              fill="#118dff"
+              fillOpacity={widget.type === "hundred-area" ? 0.85 : 0.35}
+            />
+          </AreaChart>
         </ResponsiveContainer>
       );
     }
 
-    if (widget.type === "line") {
+    if (lineVisualTypes.includes(widget.type)) {
       return (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
@@ -962,31 +1063,55 @@ export default function DashboardBuilder() {
       );
     }
 
+    if (pieVisualTypes.includes(widget.type)) {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={widget.type === "donut" ? "45%" : 0}
+              outerRadius="78%"
+            >
+              {data.map((_, index) => (
+                <Cell
+                  key={index}
+                  fill={
+                    ["#118dff", "#12239e", "#e66c37", "#6b007b", "#e044a7"][
+                      index % 5
+                    ]
+                  }
+                />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      );
+    }
+
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie data={data} dataKey="value" nameKey="name" outerRadius="78%">
-            {data.map((_, index) => (
-              <Cell
-                key={index}
-                fill={
-                  ["#118dff", "#12239e", "#e66c37", "#6b007b", "#e044a7"][
-                    index % 5
-                  ]
-                }
-              />
-            ))}
-          </Pie>
+        <BarChart data={data}>
+          <XAxis dataKey="name" stroke="#6b7280" fontSize={11} />
+          <YAxis stroke="#6b7280" fontSize={11} />
           <Tooltip />
-        </PieChart>
+          <Bar
+            dataKey="value"
+            fill={widget.type === "waterfall" ? "#e66c37" : "#118dff"}
+            radius={[3, 3, 0, 0]}
+          />
+        </BarChart>
       </ResponsiveContainer>
     );
+
   };
 
   const renderWidget = (widget: Widget, index: number) => {
     const isSelected = selectedWidget?.id === widget.id;
 
-    if (widget.type === "kpi") {
+    if (kpiVisualTypes.includes(widget.type)) {
       const kpi = getKpiData(widget, index);
 
       return (
@@ -2096,13 +2221,13 @@ const styles = StyleSheet.create({
   visualGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 5,
+    gap: 4,
     marginBottom: 12,
   },
 
   visualButton: {
-    width: 36,
-    height: 32,
+    width: 34,
+    height: 30,
     borderRadius: 3,
     borderWidth: 1,
     borderColor: "#3f3f3f",
@@ -2118,14 +2243,14 @@ const styles = StyleSheet.create({
 
   visualIcon: {
     color: "#58a6ff",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
-    lineHeight: 16,
+    lineHeight: 12,
   },
 
   visualButtonText: {
     color: "#d8d8d8",
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "700",
   },
 
@@ -2429,6 +2554,40 @@ const styles = StyleSheet.create({
   chartArea: {
     flex: 1,
     minHeight: 0,
+  },
+
+  tableVisual: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: "#f3f4f6",
+    borderBottomWidth: 1,
+    borderBottomColor: "#d1d5db",
+  },
+
+  tableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eeeeee",
+  },
+
+  tableHeaderText: {
+    flex: 1,
+    color: "#111111",
+    fontSize: 11,
+    fontWeight: "800",
+    padding: 6,
+  },
+
+  tableCellText: {
+    flex: 1,
+    color: "#333333",
+    fontSize: 11,
+    padding: 6,
   },
 
   kpiValue: {
