@@ -6,6 +6,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -95,10 +96,7 @@ interface ReportPage {
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const REPORT_STAGE_STYLE = {
-  width: 1060,
-  minHeight: 540,
-} as any;
+const REPORT_MIN_HEIGHT = 540;
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 150;
@@ -282,7 +280,8 @@ const visualTitles: Record<WidgetType, string> = {
 const kpiVisualTypes: WidgetType[] = ["kpi", "card"];
 const areaVisualTypes: WidgetType[] = ["area", "stacked-area", "hundred-area"];
 const lineVisualTypes: WidgetType[] = ["line"];
-const pieVisualTypes: WidgetType[] = ["pie", "donut", "treemap", "map", "filled-map", "shape-map"];
+const pieVisualTypes: WidgetType[] = ["pie", "donut"];
+const mapVisualTypes: WidgetType[] = ["map", "filled-map", "shape-map"];
 const tableVisualTypes: WidgetType[] = ["table", "matrix", "slicer", "decomposition-tree"];
 
 const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
@@ -343,6 +342,7 @@ const formatNumber = (value: number) =>
 
 export default function DashboardBuilder() {
   const { token } = useAuthStore();
+  const { width: windowWidth } = useWindowDimensions();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState("Home");
   const [selectedWidgetId, setSelectedWidgetId] = useState("kpi1");
@@ -387,7 +387,7 @@ export default function DashboardBuilder() {
 
   const [datasets, setDatasets] = useState<any[]>(demoDatasets);
   const [selectedDataset, setSelectedDataset] = useState<any>(demoDatasets[0]);
-  const [dashboardName, setDashboardName] = useState("My Dashboard");
+  const [dashboardName] = useState("My Dashboard");
   const [activeRail, setActiveRail] = useState("Report");
   const [dataSearch, setDataSearch] = useState("");
   const [filterSearch, setFilterSearch] = useState("");
@@ -473,11 +473,26 @@ export default function DashboardBuilder() {
       })
     );
   }, [allPageFilterFields, datasetRows, pageFilterFields]);
+  const filtersPaneWidth = filtersCollapsed ? 36 : 220;
+  const rightPaneWidth =
+    visualsCollapsed && dataCollapsed
+      ? 72
+      : visualsCollapsed !== dataCollapsed
+        ? 216
+        : 360;
+  const reportStageWidth = Math.max(
+    760,
+    Math.floor(windowWidth - 38 - filtersPaneWidth - rightPaneWidth - 24)
+  );
+  const reportStageStyle = {
+    width: reportStageWidth,
+    minHeight: REPORT_MIN_HEIGHT,
+  } as any;
   const zoomScale = zoomPercent / 100;
   const zoomThumbOffset = ((zoomPercent - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 86;
   const zoomFrameStyle = {
-    width: REPORT_STAGE_STYLE.width * zoomScale,
-    minHeight: REPORT_STAGE_STYLE.minHeight * zoomScale,
+    width: reportStageWidth * zoomScale,
+    minHeight: REPORT_MIN_HEIGHT * zoomScale,
   } as any;
   const zoomStageStyle = {
     transform: `scale(${zoomScale})`,
@@ -1091,6 +1106,39 @@ export default function DashboardBuilder() {
       );
     }
 
+    if (mapVisualTypes.includes(widget.type)) {
+      return (
+        <View style={styles.mapVisual}>
+          <View style={styles.mapSurface}>
+            {data.slice(0, 7).map((row, index) => (
+              <View
+                key={row.name}
+                style={[
+                  styles.mapBubble,
+                  {
+                    left: `${12 + ((index * 23) % 68)}%`,
+                    top: `${18 + ((index * 17) % 58)}%`,
+                    width: 30 + Math.min(34, Number(row.value) / 8),
+                    height: 30 + Math.min(34, Number(row.value) / 8),
+                  },
+                ]}
+              >
+                <Text style={styles.mapBubbleText}>{row.name.slice(0, 8)}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.mapCaption}>
+            {widget.type === "filled-map"
+              ? "Filled map"
+              : widget.type === "shape-map"
+                ? "Shape map"
+                : "Map"}{" "}
+            by {widget.xField ?? defaultXField}
+          </Text>
+        </View>
+      );
+    }
+
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
@@ -1276,7 +1324,7 @@ export default function DashboardBuilder() {
                   <div style={zoomFrameStyle}>
                     <div style={zoomStageStyle}>
                       <View style={styles.reportBoundary}>
-                        <div style={REPORT_STAGE_STYLE}>
+                        <div style={reportStageStyle}>
                           <ResponsiveGridLayout
                             className="layout"
                             layouts={{
@@ -1296,16 +1344,17 @@ export default function DashboardBuilder() {
                             }}
                             cols={{
                               lg: 12,
-                              md: 10,
-                              sm: 6,
-                              xs: 2,
+                              md: 12,
+                              sm: 12,
+                              xs: 12,
                             }}
                             rowHeight={56}
                             autoSize
                             verticalCompact={false}
                             margin={[12, 12]}
                             containerPadding={[12, 12]}
-                            preventCollision={false}
+                            compactType={null}
+                            preventCollision
                             isResizable
                             isDraggable
                             resizeHandles={["se"]}
@@ -1929,7 +1978,7 @@ const styles = StyleSheet.create({
   },
 
   reportBoundary: {
-    minWidth: 1084,
+    width: "100%",
     minHeight: 564,
     borderWidth: 1,
     borderColor: "#555555",
@@ -2588,6 +2637,43 @@ const styles = StyleSheet.create({
     color: "#333333",
     fontSize: 11,
     padding: 6,
+  },
+
+  mapVisual: {
+    flex: 1,
+    minHeight: 0,
+  },
+
+  mapSurface: {
+    flex: 1,
+    position: "relative",
+    backgroundColor: "#eef6fb",
+    borderWidth: 1,
+    borderColor: "#d6e3ea",
+    overflow: "hidden",
+  },
+
+  mapBubble: {
+    position: "absolute",
+    borderRadius: 999,
+    backgroundColor: "rgba(17, 141, 255, 0.72)",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  mapBubbleText: {
+    color: "#ffffff",
+    fontSize: 8,
+    fontWeight: "800",
+  },
+
+  mapCaption: {
+    color: "#4b5563",
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 5,
   },
 
   kpiValue: {
