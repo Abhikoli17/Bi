@@ -484,10 +484,10 @@ export default function DashboardBuilder() {
     760,
     Math.floor(windowWidth - 38 - filtersPaneWidth - rightPaneWidth - 24)
   );
-  const reportStageStyle = {
+  const reportBoundaryStyle = {
     width: reportStageWidth,
     minHeight: REPORT_MIN_HEIGHT,
-  } as any;
+  };
   const zoomScale = zoomPercent / 100;
   const zoomThumbOffset = ((zoomPercent - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 86;
   const zoomFrameStyle = {
@@ -1323,54 +1323,53 @@ export default function DashboardBuilder() {
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <div style={zoomFrameStyle}>
                     <div style={zoomStageStyle}>
-                      <View style={styles.reportBoundary}>
-                        <div style={reportStageStyle}>
-                          <ResponsiveGridLayout
-                            className="layout"
-                            layouts={{
-                              lg: activePageWidgets.map((widget) => ({
-                                i: widget.id,
-                                x: widget.layout.x,
-                                y: widget.layout.y,
-                                w: widget.layout.w,
-                                h: widget.layout.h,
-                              })),
-                            }}
-                            breakpoints={{
-                              lg: 1200,
-                              md: 996,
-                              sm: 768,
-                              xs: 480,
-                            }}
-                            cols={{
-                              lg: 12,
-                              md: 12,
-                              sm: 12,
-                              xs: 12,
-                            }}
-                            rowHeight={56}
-                            autoSize
-                            verticalCompact={false}
-                            margin={[12, 12]}
-                            containerPadding={[12, 12]}
-                            compactType={null}
-                            preventCollision
-                            isResizable
-                            isDraggable
-                            resizeHandles={["se"]}
-                            onLayoutChange={onLayoutChange}
-                          >
-                            {activePageWidgets.map((widget, index) => (
-                              <div
-                                key={widget.id}
-                                style={GRID_ITEM_STYLE}
-                                onClick={() => setSelectedWidgetId(widget.id)}
-                              >
-                                {renderWidget(widget, index)}
-                              </div>
-                            ))}
-                          </ResponsiveGridLayout>
-                        </div>
+                      <View style={[styles.reportBoundary, reportBoundaryStyle]}>
+                        <ResponsiveGridLayout
+                          className="layout"
+                          width={reportStageWidth}
+                          layouts={{
+                            lg: activePageWidgets.map((widget) => ({
+                              i: widget.id,
+                              x: widget.layout.x,
+                              y: widget.layout.y,
+                              w: widget.layout.w,
+                              h: widget.layout.h,
+                            })),
+                          }}
+                          breakpoints={{
+                            lg: 1200,
+                            md: 996,
+                            sm: 768,
+                            xs: 480,
+                          }}
+                          cols={{
+                            lg: 12,
+                            md: 12,
+                            sm: 12,
+                            xs: 12,
+                          }}
+                          rowHeight={56}
+                          autoSize
+                          verticalCompact={false}
+                          margin={[12, 12]}
+                          containerPadding={[12, 12]}
+                          compactType={null}
+                          preventCollision
+                          isResizable
+                          isDraggable
+                          resizeHandles={["se"]}
+                          onLayoutChange={onLayoutChange}
+                        >
+                          {activePageWidgets.map((widget, index) => (
+                            <div
+                              key={widget.id}
+                              style={GRID_ITEM_STYLE}
+                              onClick={() => setSelectedWidgetId(widget.id)}
+                            >
+                              {renderWidget(widget, index)}
+                            </div>
+                          ))}
+                        </ResponsiveGridLayout>
                       </View>
                     </div>
                   </div>
@@ -1978,8 +1977,6 @@ const styles = StyleSheet.create({
   },
 
   reportBoundary: {
-    width: "100%",
-    minHeight: 564,
     borderWidth: 1,
     borderColor: "#555555",
     borderStyle: "dotted",
