@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   Alert,
   ScrollView,
@@ -324,13 +325,64 @@ const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
   ],
 };
 
-const getRibbonInitials = (label: string) =>
-  label
-    .split(" ")
-    .map((word) => word[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+const getRibbonIcon = (label: string) => {
+  const icons: Record<string, string> = {
+    "Get data": "database-plus-outline",
+    Excel: "microsoft-excel",
+    "SQL Server": "database-cog-outline",
+    "Enter data": "table-plus",
+    "Transform data": "table-edit",
+    Refresh: "refresh",
+    "New visual": "chart-bar",
+    "Text box": "format-textbox",
+    "More visuals": "chart-box-plus-outline",
+    "New measure": "calculator-variant-outline",
+    "Quick measure": "lightning-bolt-outline",
+    Publish: "upload-outline",
+    Share: "share-variant",
+    Save: "content-save-outline",
+    Export: "export-variant",
+    Open: "folder-open-outline",
+    "New report": "file-chart-outline",
+  };
+
+  return icons[label] ?? "square-rounded-outline";
+};
+
+const getVisualIcon = (type: WidgetType) => {
+  const icons: Record<WidgetType, string> = {
+    "stacked-bar": "chart-bar-stacked",
+    "stacked-column": "chart-bar-stacked",
+    area: "chart-areaspline",
+    "clustered-bar": "chart-bar",
+    "clustered-column": "chart-bar",
+    "hundred-bar": "chart-bar-stacked",
+    "hundred-column": "chart-bar-stacked",
+    line: "chart-line",
+    "stacked-area": "chart-areaspline",
+    "hundred-area": "chart-areaspline",
+    "line-stacked-column": "chart-line-variant",
+    "line-clustered-column": "chart-line",
+    ribbon: "chart-timeline-variant",
+    waterfall: "chart-waterfall",
+    funnel: "filter-variant",
+    scatter: "scatter-plot",
+    pie: "chart-pie",
+    donut: "chart-donut",
+    treemap: "view-grid-outline",
+    map: "map-marker-radius-outline",
+    "filled-map": "map",
+    "shape-map": "shape-outline",
+    card: "card-text-outline",
+    kpi: "speedometer",
+    slicer: "filter-cog-outline",
+    table: "table",
+    matrix: "table-large",
+    "decomposition-tree": "file-tree-outline",
+  };
+
+  return icons[type];
+};
 
 const isNumericValue = (value: unknown) =>
   typeof value === "number" || (!Number.isNaN(Number(value)) && value !== "");
@@ -1228,10 +1280,12 @@ export default function DashboardBuilder() {
 
         <View style={styles.titleActions}>
           <TouchableOpacity style={styles.askAiButton} onPress={askAi}>
+            <MaterialCommunityIcons name={"creation" as any} size={14} color="#111111" />
             <Text style={styles.askAiText}>Ask AI</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.shareButton} onPress={saveDashboard}>
+            <MaterialCommunityIcons name={"share-variant" as any} size={14} color="#ffffff" />
             <Text style={styles.shareText}>Share</Text>
           </TouchableOpacity>
         </View>
@@ -1253,9 +1307,11 @@ export default function DashboardBuilder() {
                       activeTab === "View" && item.startsWith("Theme") && styles.themeIcon,
                     ]}
                   >
-                    <Text style={styles.ribbonIconText}>
-                      {getRibbonInitials(item)}
-                    </Text>
+                    <MaterialCommunityIcons
+                      name={getRibbonIcon(item) as any}
+                      size={17}
+                      color="#dcecff"
+                    />
                   </View>
                   <Text style={styles.ribbonButtonText}>{item}</Text>
                 </TouchableOpacity>
@@ -1277,9 +1333,11 @@ export default function DashboardBuilder() {
               onPress={() => selectDataSource(source)}
             >
               <View style={styles.dataSourceIcon}>
-                <Text style={styles.dataSourceIconText}>
-                  {getRibbonInitials(source)}
-                </Text>
+                <MaterialCommunityIcons
+                  name={getRibbonIcon(source) as any}
+                  size={16}
+                  color="#dcecff"
+                />
               </View>
               <Text style={styles.dataSourceText}>{source}</Text>
             </TouchableOpacity>
@@ -1548,7 +1606,11 @@ export default function DashboardBuilder() {
                   ]}
                   onPress={() => addVisualFromPane(visual.type)}
                 >
-                  <Text style={styles.visualIcon}>{visual.icon}</Text>
+                  <MaterialCommunityIcons
+                    name={getVisualIcon(visual.type) as any}
+                    size={16}
+                    color="#58a6ff"
+                  />
                   <Text style={styles.visualButtonText}>{visual.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -1587,12 +1649,14 @@ export default function DashboardBuilder() {
                 style={styles.actionButton}
                 onPress={duplicateSelectedVisual}
               >
+                <MaterialCommunityIcons name={"content-copy" as any} size={13} color="#ffffff" />
                 <Text style={styles.actionButtonText}>Duplicate</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.deleteButton]}
                 onPress={deleteSelectedVisual}
               >
+                <MaterialCommunityIcons name={"delete-outline" as any} size={13} color="#ffffff" />
                 <Text style={styles.actionButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
@@ -1683,6 +1747,11 @@ export default function DashboardBuilder() {
                     ]}
                     onPress={saveSelectedDataset}
                   >
+                    <MaterialCommunityIcons
+                      name={"content-save-outline" as any}
+                      size={13}
+                      color="#ffffff"
+                    />
                     <Text style={styles.dataActionText}>
                       {selectedDatasetIsSaved ? "Saved" : "Save Data"}
                     </Text>
@@ -1692,6 +1761,11 @@ export default function DashboardBuilder() {
                     style={[styles.dataActionButton, styles.deleteDataButton]}
                     onPress={deleteSelectedDataset}
                   >
+                    <MaterialCommunityIcons
+                      name={"delete-outline" as any}
+                      size={13}
+                      color="#ffffff"
+                    />
                     <Text style={styles.dataActionText}>Delete</Text>
                   </TouchableOpacity>
                 </View>
@@ -1699,6 +1773,11 @@ export default function DashboardBuilder() {
             )}
 
             <TouchableOpacity style={styles.saveButton} onPress={saveDashboard}>
+              <MaterialCommunityIcons
+                name={"content-save-outline" as any}
+                size={14}
+                color="#ffffff"
+              />
               <Text style={styles.saveButtonText}>Save Dashboard</Text>
             </TouchableOpacity>
           </View>
@@ -1764,6 +1843,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 
   askAiText: {
@@ -1777,6 +1859,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 
   shareText: {
@@ -1816,12 +1901,12 @@ const styles = StyleSheet.create({
   },
 
   ribbonIcon: {
-    width: 24,
-    height: 22,
+    width: 28,
+    height: 26,
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: "#777777",
-    backgroundColor: "#2b2b2b",
+    borderColor: "#5f6b77",
+    backgroundColor: "#2a3138",
     marginBottom: 4,
     alignItems: "center",
     justifyContent: "center",
@@ -1885,10 +1970,11 @@ const styles = StyleSheet.create({
   },
 
   dataSourceIcon: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     borderWidth: 1,
-    borderColor: "#5c5c5c",
+    borderColor: "#5f6b77",
+    backgroundColor: "#2a3138",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
@@ -2272,8 +2358,8 @@ const styles = StyleSheet.create({
   },
 
   visualButton: {
-    width: 34,
-    height: 30,
+    width: 38,
+    height: 36,
     borderRadius: 3,
     borderWidth: 1,
     borderColor: "#3f3f3f",
@@ -2296,8 +2382,9 @@ const styles = StyleSheet.create({
 
   visualButtonText: {
     color: "#d8d8d8",
-    fontSize: 7,
+    fontSize: 6,
     fontWeight: "700",
+    textAlign: "center",
   },
 
   visualHint: {
@@ -2395,6 +2482,9 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     paddingVertical: 8,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 5,
   },
 
   deleteButton: {
@@ -2479,6 +2569,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 3,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 5,
   },
 
   savedDataButton: {
@@ -2536,6 +2629,9 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginTop: 12,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
   },
 
   saveButtonText: {
