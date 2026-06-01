@@ -1319,8 +1319,8 @@ export default function DashboardBuilder() {
           <View style={styles.queryEditor}>
             <Text style={styles.queryText}>EVALUATE</Text>
             <Text style={styles.queryText}>SUMMARIZECOLUMNS(</Text>
-            <Text style={styles.queryText}>  "{selectedDataset?.name ?? "Dataset"}",</Text>
-            <Text style={styles.queryText}>  "Rows", COUNTROWS()</Text>
+            <Text style={styles.queryText}>{`  "${selectedDataset?.name ?? "Dataset"}",`}</Text>
+            <Text style={styles.queryText}>{`  "Rows", COUNTROWS()`}</Text>
             <Text style={styles.queryText}>)</Text>
           </View>
         </View>
@@ -1451,30 +1451,33 @@ export default function DashboardBuilder() {
         <Text style={styles.statusText}>Visuals: {activePageWidgets.length}</Text>
       </View>
 
-      <View style={styles.workspace}>
-        <View style={styles.leftRail}>
-          {leftRailItems.map((item, index) => (
-            <TouchableOpacity
-              key={item.label}
-              style={[
-                styles.railItem,
-                activeRail === item.label && styles.activeRailItem,
-              ]}
-              onPress={() => handleRailPress(item.label)}
-            >
-              <Text
+        <View style={styles.workspace}>
+          <View style={styles.leftRail}>
+          {leftRailItems.map((item) => (
+            <div key={item.value} title={item.label} style={VISUAL_TOOLTIP_WRAP_STYLE}>
+              <TouchableOpacity
+                accessibilityLabel={item.label}
                 style={[
-                  styles.railIcon,
-                  item.icon.length > 1 && styles.railLongIcon,
+                  styles.railItem,
+                  activeRail === item.value && styles.activeRailItem,
                 ]}
+                onPress={() => handleRailPress(item.value)}
               >
-                {item.icon}
-              </Text>
-            </TouchableOpacity>
+                <MaterialCommunityIcons
+                  name={item.icon as any}
+                  size={21}
+                  color={activeRail === item.value ? "#ffffff" : "#d8d8d8"}
+                />
+              </TouchableOpacity>
+            </div>
           ))}
         </View>
 
         <View style={styles.reportArea}>
+          {activeRail !== "Report" ? (
+            renderRailWorkspace()
+          ) : (
+          <>
           <View style={styles.reportShell}>
             <View style={styles.reportCanvas}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -1582,6 +1585,8 @@ export default function DashboardBuilder() {
               <Text style={styles.zoomPercentText}>{zoomPercent}%</Text>
             </View>
           </View>
+          </>
+          )}
         </View>
 
         {filtersCollapsed ? (
@@ -2172,6 +2177,115 @@ const styles = StyleSheet.create({
 
   railLongIcon: {
     fontSize: 8,
+  },
+
+  modeWorkspace: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    padding: 18,
+  },
+
+  modeHeader: {
+    minHeight: 42,
+    borderBottomWidth: 1,
+    borderBottomColor: "#d7d7d7",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  modeTitle: {
+    color: "#202020",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+
+  modeSubtitle: {
+    color: "#666666",
+    fontSize: 12,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+
+  dataTable: {
+    borderWidth: 1,
+    borderColor: "#d0d0d0",
+    backgroundColor: "#ffffff",
+  },
+
+  dataTableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eeeeee",
+  },
+
+  dataTableCell: {
+    width: 136,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRightWidth: 1,
+    borderRightColor: "#eeeeee",
+    color: "#2a2a2a",
+    fontSize: 12,
+  },
+
+  dataTableHeaderCell: {
+    backgroundColor: "#f3f3f3",
+    color: "#111111",
+    fontWeight: "800",
+  },
+
+  modelCanvas: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 18,
+    alignContent: "flex-start",
+  },
+
+  modelTable: {
+    width: 220,
+    borderWidth: 1,
+    borderColor: "#c8c8c8",
+    backgroundColor: "#ffffff",
+    shadowColor: "#000000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+
+  modelTableTitle: {
+    backgroundColor: "#2d2d2d",
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "800",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+
+  modelField: {
+    color: "#222222",
+    fontSize: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderTopWidth: 1,
+    borderTopColor: "#eeeeee",
+  },
+
+  queryEditor: {
+    flex: 1,
+    backgroundColor: "#1e1e1e",
+    borderWidth: 1,
+    borderColor: "#333333",
+    padding: 16,
+  },
+
+  queryText: {
+    color: "#d8d8d8",
+    fontFamily: "monospace",
+    fontSize: 13,
+    lineHeight: 22,
   },
 
   reportArea: {
