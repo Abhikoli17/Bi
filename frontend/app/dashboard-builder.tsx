@@ -244,11 +244,11 @@ const dataSourceOptions = [
 ];
 
 const leftRailItems = [
-  { label: "Report", icon: "R" },
-  { label: "Data", icon: "D" },
-  { label: "Model", icon: "M" },
-  { label: "DAX", icon: "DAX" },
-  { label: "TMDL", icon: "TMDL" },
+  { label: "Report view", value: "Report", icon: "chart-box-outline" },
+  { label: "Table view", value: "Data", icon: "table" },
+  { label: "Model view", value: "Model", icon: "relation-many-to-many" },
+  { label: "DAX query view", value: "DAX", icon: "file-code-outline" },
+  { label: "TMDL view", value: "TMDL", icon: "file-document-edit-outline" },
 ];
 
 const visualTitles: Record<WidgetType, string> = {
@@ -939,10 +939,7 @@ export default function DashboardBuilder() {
     }
     if (rail === "Model") {
       setActiveTab("Modeling");
-      return;
     }
-
-    Alert.alert(rail, `${rail} view is available as a prototype panel.`);
   };
 
   const handleRibbonAction = (item: string) => {
@@ -1245,6 +1242,105 @@ export default function DashboardBuilder() {
 
         <View pointerEvents="none" style={styles.chartArea}>
           {renderChart(widget)}
+        </View>
+      </View>
+    );
+  };
+
+  const renderRailWorkspace = () => {
+    if (activeRail === "Data") {
+      const previewRows = filteredRows.slice(0, 20);
+
+      return (
+        <View style={styles.modeWorkspace}>
+          <View style={styles.modeHeader}>
+            <MaterialCommunityIcons name={"table" as any} size={22} color="#00b294" />
+            <Text style={styles.modeTitle}>Table view</Text>
+            <Text style={styles.modeSubtitle}>{selectedDataset?.name ?? "No dataset selected"}</Text>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator>
+            <View style={styles.dataTable}>
+              <View style={styles.dataTableRow}>
+                {selectedFields.map((field: any) => (
+                  <Text key={field.name} style={[styles.dataTableCell, styles.dataTableHeaderCell]}>
+                    {field.name}
+                  </Text>
+                ))}
+              </View>
+              {previewRows.map((row: any, rowIndex: number) => (
+                <View key={rowIndex} style={styles.dataTableRow}>
+                  {selectedFields.map((field: any) => (
+                    <Text key={field.name} style={styles.dataTableCell}>
+                      {String(row[field.name] ?? "")}
+                    </Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      );
+    }
+
+    if (activeRail === "Model") {
+      return (
+        <View style={styles.modeWorkspace}>
+          <View style={styles.modeHeader}>
+            <MaterialCommunityIcons name={"relation-many-to-many" as any} size={22} color="#00b294" />
+            <Text style={styles.modeTitle}>Model view</Text>
+            <Text style={styles.modeSubtitle}>Tables and relationships</Text>
+          </View>
+
+          <View style={styles.modelCanvas}>
+            {datasets.slice(0, 4).map((dataset: any) => (
+              <View key={dataset._id} style={styles.modelTable}>
+                <Text style={styles.modelTableTitle}>{dataset.name}</Text>
+                {(dataset.columns ?? []).slice(0, 6).map((field: any) => (
+                  <Text key={field.name} style={styles.modelField}>
+                    {field.name}
+                  </Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    if (activeRail === "DAX") {
+      return (
+        <View style={styles.modeWorkspace}>
+          <View style={styles.modeHeader}>
+            <MaterialCommunityIcons name={"file-code-outline" as any} size={22} color="#00b294" />
+            <Text style={styles.modeTitle}>DAX query view</Text>
+            <Text style={styles.modeSubtitle}>Prototype query surface</Text>
+          </View>
+          <View style={styles.queryEditor}>
+            <Text style={styles.queryText}>EVALUATE</Text>
+            <Text style={styles.queryText}>SUMMARIZECOLUMNS(</Text>
+            <Text style={styles.queryText}>  "{selectedDataset?.name ?? "Dataset"}",</Text>
+            <Text style={styles.queryText}>  "Rows", COUNTROWS()</Text>
+            <Text style={styles.queryText}>)</Text>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.modeWorkspace}>
+        <View style={styles.modeHeader}>
+          <MaterialCommunityIcons name={"file-document-edit-outline" as any} size={22} color="#00b294" />
+          <Text style={styles.modeTitle}>TMDL view</Text>
+          <Text style={styles.modeSubtitle}>Semantic model definition preview</Text>
+        </View>
+        <View style={styles.queryEditor}>
+          <Text style={styles.queryText}>model {`{`}</Text>
+          <Text style={styles.queryText}>  culture: en-US</Text>
+          <Text style={styles.queryText}>  table {selectedDataset?.name ?? "Dataset"} {`{`}</Text>
+          <Text style={styles.queryText}>    column {selectedFields[0]?.name ?? "Column"}</Text>
+          <Text style={styles.queryText}>  {`}`}</Text>
+          <Text style={styles.queryText}>{`}`}</Text>
         </View>
       </View>
     );
