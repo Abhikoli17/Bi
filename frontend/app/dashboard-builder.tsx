@@ -525,16 +525,16 @@ export default function DashboardBuilder() {
       })
     );
   }, [allPageFilterFields, datasetRows, pageFilterFields]);
-  const filtersPaneWidth = filtersCollapsed ? 36 : 220;
+  const filtersPaneWidth = filtersCollapsed ? 36 : 190;
   const rightPaneWidth =
     visualsCollapsed && dataCollapsed
       ? 72
       : visualsCollapsed !== dataCollapsed
-        ? 216
-        : 360;
+        ? 190
+        : 300;
   const reportStageWidth = Math.max(
     760,
-    Math.floor(windowWidth - 38 - filtersPaneWidth - rightPaneWidth - 24)
+    Math.floor(windowWidth - 38 - filtersPaneWidth - rightPaneWidth - 12)
   );
   const reportBoundaryStyle = {
     width: reportStageWidth,
@@ -1608,10 +1608,9 @@ export default function DashboardBuilder() {
                 >
                   <MaterialCommunityIcons
                     name={getVisualIcon(visual.type) as any}
-                    size={16}
+                    size={20}
                     color="#58a6ff"
                   />
-                  <Text style={styles.visualButtonText}>{visual.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -2159,7 +2158,7 @@ const styles = StyleSheet.create({
   },
 
   filtersPanel: {
-    width: 220,
+    width: 190,
     backgroundColor: "#ffffff",
     borderLeftWidth: 1,
     borderLeftColor: "#c8c8c8",
@@ -2239,7 +2238,7 @@ const styles = StyleSheet.create({
   },
 
   rightPanes: {
-    width: 360,
+    width: 300,
     flexDirection: "row",
     backgroundColor: "#181818",
     borderLeftWidth: 1,
@@ -2251,11 +2250,11 @@ const styles = StyleSheet.create({
   },
 
   rightPanesOneCollapsed: {
-    width: 216,
+    width: 190,
   },
 
   visualPane: {
-    width: 180,
+    width: 150,
     borderRightWidth: 1,
     borderRightColor: "#4a4a4a",
     padding: 8,
@@ -2263,7 +2262,7 @@ const styles = StyleSheet.create({
 
   dataPane: {
     flex: 1,
-    padding: 10,
+    padding: 8,
   },
 
   darkPanelHeader: {
@@ -2353,13 +2352,13 @@ const styles = StyleSheet.create({
   visualGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 4,
+    gap: 6,
     marginBottom: 12,
   },
 
   visualButton: {
-    width: 38,
-    height: 36,
+    width: 30,
+    height: 30,
     borderRadius: 3,
     borderWidth: 1,
     borderColor: "#3f3f3f",
@@ -2371,20 +2370,6 @@ const styles = StyleSheet.create({
   activeVisualButton: {
     borderColor: "#00b294",
     backgroundColor: "#123c37",
-  },
-
-  visualIcon: {
-    color: "#58a6ff",
-    fontSize: 9,
-    fontWeight: "800",
-    lineHeight: 12,
-  },
-
-  visualButtonText: {
-    color: "#d8d8d8",
-    fontSize: 6,
-    fontWeight: "700",
-    textAlign: "center",
   },
 
   visualHint: {
