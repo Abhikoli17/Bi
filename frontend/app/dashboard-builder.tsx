@@ -75,6 +75,8 @@ type WidgetType =
   | "matrix"
   | "decomposition-tree";
 
+type VisualPaneMode = "build" | "format" | "analytics";
+
 interface Widget {
   id: string;
   pageId: string;
@@ -450,6 +452,7 @@ export default function DashboardBuilder() {
   const [pageFilterFields, setPageFilterFields] = useState<string[]>([]);
   const [allPageFilterFields, setAllPageFilterFields] = useState<string[]>([]);
   const [savedDatasetIds, setSavedDatasetIds] = useState<string[]>([]);
+  const [activeVisualMode, setActiveVisualMode] = useState<VisualPaneMode>("build");
 
   const selectedFields = useMemo(
     () => (selectedDataset?.columns?.length ? selectedDataset.columns : fallbackFields),
@@ -1748,94 +1751,173 @@ export default function DashboardBuilder() {
                 <Text style={styles.panelTitle}>Visualizations</Text>
                 <Text style={styles.panelChevron}>{">"}</Text>
               </TouchableOpacity>
-              <Text style={styles.panelSubtitle}>Build visual</Text>
+              <Text style={styles.panelSubtitle}>
+                {activeVisualMode === "format"
+                  ? "Format page"
+                  : activeVisualMode === "analytics"
+                    ? "Analytics"
+                    : "Build visual"}
+              </Text>
 
               <View style={styles.visualModeRow}>
-                <View style={styles.activeBuildMode}>
+                <TouchableOpacity
+                  style={[
+                    styles.visualModeButton,
+                    activeVisualMode === "build" && styles.activeVisualModeButton,
+                  ]}
+                  onPress={() => setActiveVisualMode("build")}
+                >
                   <MaterialCommunityIcons
                     name={"view-dashboard-outline" as any}
                     size={30}
-                    color="#00b294"
+                    color={activeVisualMode === "build" ? "#00b294" : "#d8d8d8"}
                   />
-                </View>
-                <View style={styles.buildModeButton}>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.visualModeButton,
+                    activeVisualMode === "format" && styles.activeVisualModeButton,
+                  ]}
+                  onPress={() => setActiveVisualMode("format")}
+                >
                   <MaterialCommunityIcons
                     name={"format-paint" as any}
                     size={28}
-                    color="#d8d8d8"
+                    color={activeVisualMode === "format" ? "#00b294" : "#d8d8d8"}
                   />
-                </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.visualModeButton,
+                    activeVisualMode === "analytics" && styles.activeVisualModeButton,
+                  ]}
+                  onPress={() => setActiveVisualMode("analytics")}
+                >
+                  <MaterialCommunityIcons
+                    name={"magnify-chart" as any}
+                    size={28}
+                    color={activeVisualMode === "analytics" ? "#00b294" : "#d8d8d8"}
+                  />
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.visualGrid}>
-                {visualButtons.map((visual) => (
-                  <div
-                    key={visual.type}
-                    title={visual.label}
-                    style={VISUAL_TOOLTIP_WRAP_STYLE}
-                  >
-                    <TouchableOpacity
-                      accessibilityLabel={visual.label}
-                      style={[
-                        styles.visualButton,
-                        selectedWidget?.type === visual.type && styles.activeVisualButton,
-                      ]}
-                      onPress={() => addVisualFromPane(visual.type)}
-                    >
-                      <MaterialCommunityIcons
-                        name={getVisualIcon(visual.type) as any}
-                        size={23}
-                        color="#58a6ff"
-                      />
+              {activeVisualMode === "build" && (
+                <>
+                  <View style={styles.visualGrid}>
+                    {visualButtons.map((visual) => (
+                      <div
+                        key={visual.type}
+                        title={visual.label}
+                        style={VISUAL_TOOLTIP_WRAP_STYLE}
+                      >
+                        <TouchableOpacity
+                          accessibilityLabel={visual.label}
+                          style={[
+                            styles.visualButton,
+                            selectedWidget?.type === visual.type && styles.activeVisualButton,
+                          ]}
+                          onPress={() => addVisualFromPane(visual.type)}
+                        >
+                          <MaterialCommunityIcons
+                            name={getVisualIcon(visual.type) as any}
+                            size={23}
+                            color="#58a6ff"
+                          />
+                        </TouchableOpacity>
+                      </div>
+                    ))}
+                  </View>
+
+                  {[
+                    ["Y-axis", selectedWidget?.valueField],
+                    ["X-axis", selectedWidget?.xField],
+                    ["Legend", undefined],
+                    ["Small multiples", undefined],
+                    ["Tooltips", undefined],
+                  ].map(([label, value]) => (
+                    <View key={label} style={styles.fieldWellSection}>
+                      <Text style={styles.dropZoneTitle}>{label}</Text>
+                      <TouchableOpacity style={styles.valuesDropZone}>
+                        <Text style={styles.dropZoneText}>
+                          {value ?? "Add data fields here"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  <View style={styles.drillSection}>
+                    <Text style={styles.dropZoneTitle}>Drill through</Text>
+                    <View style={styles.toggleRow}>
+                      <Text style={styles.dropZoneText}>Cross-report</Text>
+                      <View style={styles.toggleOff}>
+                        <Text style={styles.toggleText}>Off</Text>
+                      </View>
+                    </View>
+                    <View style={styles.toggleRow}>
+                      <Text style={styles.dropZoneText}>Keep all filters</Text>
+                      <View style={styles.toggleOn}>
+                        <Text style={styles.toggleText}>On</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity style={styles.valuesDropZone}>
+                      <Text style={styles.dropZoneText}>Add drill-through fields here</Text>
                     </TouchableOpacity>
-                  </div>
-                ))}
-              </View>
-
-              <View style={styles.valuesSection}>
-                <Text style={styles.dropZoneTitle}>Values</Text>
-                <TouchableOpacity style={styles.valuesDropZone}>
-                  <Text style={styles.dropZoneText}>
-                    {selectedWidget?.valueField ?? "Add data fields here"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.drillSection}>
-                <Text style={styles.dropZoneTitle}>Drill through</Text>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.dropZoneText}>Cross-report</Text>
-                  <View style={styles.toggleOff}>
-                    <Text style={styles.toggleText}>Off</Text>
                   </View>
-                </View>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.dropZoneText}>Keep all filters</Text>
-                  <View style={styles.toggleOn}>
-                    <Text style={styles.toggleText}>On</Text>
-                  </View>
-                </View>
-                <TouchableOpacity style={styles.valuesDropZone}>
-                  <Text style={styles.dropZoneText}>Add drill-through fields here</Text>
-                </TouchableOpacity>
-              </View>
 
-              <View style={styles.visualActions}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={duplicateSelectedVisual}
-                >
-                  <MaterialCommunityIcons name={"content-copy" as any} size={13} color="#ffffff" />
-                  <Text style={styles.actionButtonText}>Duplicate</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.deleteButton]}
-                  onPress={deleteSelectedVisual}
-                >
-                  <MaterialCommunityIcons name={"delete-outline" as any} size={13} color="#ffffff" />
-                  <Text style={styles.actionButtonText}>Delete</Text>
-                </TouchableOpacity>
-              </View>
+                  <View style={styles.visualActions}>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={duplicateSelectedVisual}
+                    >
+                      <MaterialCommunityIcons name={"content-copy" as any} size={13} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>Duplicate</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.deleteButton]}
+                      onPress={deleteSelectedVisual}
+                    >
+                      <MaterialCommunityIcons name={"delete-outline" as any} size={13} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {activeVisualMode === "format" && (
+                <View style={styles.formatPane}>
+                  <TextInput
+                    placeholder="Search"
+                    placeholderTextColor="#cfcfcf"
+                    style={styles.formatSearch}
+                  />
+                  {[
+                    "Page information",
+                    "Canvas settings",
+                    "Canvas background",
+                    "Wallpaper",
+                    "Filter pane",
+                    "Filter cards",
+                  ].map((item) => (
+                    <TouchableOpacity key={item} style={styles.formatRow}>
+                      <Text style={styles.formatChevron}>{">"}</Text>
+                      <Text style={styles.formatRowText}>{item}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {activeVisualMode === "analytics" && (
+                <View style={styles.formatPane}>
+                  {["Trend line", "Forecast", "Error bars", "Min line", "Max line"].map(
+                    (item) => (
+                      <TouchableOpacity key={item} style={styles.formatRow}>
+                        <Text style={styles.formatChevron}>{">"}</Text>
+                        <Text style={styles.formatRowText}>{item}</Text>
+                      </TouchableOpacity>
+                    )
+                  )}
+                </View>
+              )}
             </ScrollView>
           </View>
           )}
@@ -2739,20 +2821,16 @@ const styles = StyleSheet.create({
     gap: 18,
   },
 
-  activeBuildMode: {
+  visualModeButton: {
     width: 46,
     height: 40,
-    borderBottomWidth: 2,
-    borderBottomColor: "#00b294",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  buildModeButton: {
-    width: 46,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+  activeVisualModeButton: {
+    borderBottomWidth: 2,
+    borderBottomColor: "#00b294",
   },
 
   visualGrid: {
@@ -2797,6 +2875,50 @@ const styles = StyleSheet.create({
     borderTopColor: "#5a5a5a",
     paddingTop: 10,
     marginTop: 6,
+  },
+
+  fieldWellSection: {
+    borderTopWidth: 1,
+    borderTopColor: "#3a3a3a",
+    paddingTop: 8,
+    marginTop: 8,
+  },
+
+  formatPane: {
+    borderTopWidth: 1,
+    borderTopColor: "#333333",
+    paddingTop: 8,
+  },
+
+  formatSearch: {
+    height: 34,
+    borderWidth: 1,
+    borderColor: "#5a5a5a",
+    backgroundColor: "#242424",
+    color: "#ffffff",
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+
+  formatRow: {
+    minHeight: 46,
+    borderTopWidth: 1,
+    borderTopColor: "#3a3a3a",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+
+  formatChevron: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+
+  formatRowText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "800",
   },
 
   valuesDropZone: {
