@@ -403,7 +403,7 @@ export default function DashboardBuilder() {
   const { width: windowWidth } = useWindowDimensions();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState("Home");
-  const [selectedWidgetId, setSelectedWidgetId] = useState("kpi1");
+  const [selectedWidgetId, setSelectedWidgetId] = useState("");
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [visualsCollapsed, setVisualsCollapsed] = useState(true);
   const [dataCollapsed, setDataCollapsed] = useState(true);
@@ -414,34 +414,7 @@ export default function DashboardBuilder() {
   const [activePageId, setActivePageId] = useState("page-1");
   const [zoomPercent, setZoomPercent] = useState(68);
 
-  const [widgets, setWidgets] = useState<Widget[]>([
-    {
-      id: "kpi1",
-      pageId: "page-1",
-      type: "kpi",
-      title: "Total Quantity",
-      valueField: "Quantity",
-      layout: { x: 0, y: 0, w: 4, h: 2 },
-    },
-    {
-      id: "line1",
-      pageId: "page-1",
-      type: "line",
-      title: "Sales Trend",
-      xField: "Date",
-      valueField: "Revenue",
-      layout: { x: 4, y: 0, w: 6, h: 3 },
-    },
-    {
-      id: "bar1",
-      pageId: "page-1",
-      type: "clustered-column",
-      title: "Sales by Category",
-      xField: "Region",
-      valueField: "Revenue",
-      layout: { x: 0, y: 3, w: 6, h: 3 },
-    },
-  ]);
+  const [widgets, setWidgets] = useState<Widget[]>([]);
 
   const [datasets, setDatasets] = useState<any[]>(demoDatasets);
   const [selectedDataset, setSelectedDataset] = useState<any>(demoDatasets[0]);
@@ -619,7 +592,10 @@ export default function DashboardBuilder() {
   });
 
   const addPage = () => {
-    const nextPageNumber = pages.length + 1;
+    const usedPageNumbers = pages
+      .map((page) => Number(page.name.replace("Page ", "")))
+      .filter((pageNumber) => !Number.isNaN(pageNumber));
+    const nextPageNumber = Math.max(1, ...usedPageNumbers) + 1;
     const id = `page-${Date.now()}`;
 
     setPages((prev) => [
@@ -631,6 +607,24 @@ export default function DashboardBuilder() {
     ]);
     setActivePageId(id);
     setSelectedWidgetId("");
+  };
+
+  const removePage = (pageId: string) => {
+    if (pageId === "page-1" || pages.length === 1) return;
+
+    const pageIndex = pages.findIndex((page) => page.id === pageId);
+    const fallbackPage =
+      pages[pageIndex - 1] ?? pages.find((page) => page.id !== pageId) ?? pages[0];
+
+    setPages((prev) => prev.filter((page) => page.id !== pageId));
+    setWidgets((prev) => prev.filter((widget) => widget.pageId !== pageId));
+
+    if (activePageId === pageId) {
+      setActivePageId(fallbackPage.id);
+      setSelectedWidgetId(
+        widgets.find((widget) => widget.pageId === fallbackPage.id)?.id ?? ""
+      );
+    }
   };
 
   const changeZoom = (nextZoom: number) => {
