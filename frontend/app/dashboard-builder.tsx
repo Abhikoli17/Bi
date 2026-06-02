@@ -402,9 +402,9 @@ export default function DashboardBuilder() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState("Home");
   const [selectedWidgetId, setSelectedWidgetId] = useState("kpi1");
-  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
-  const [visualsCollapsed, setVisualsCollapsed] = useState(false);
-  const [dataCollapsed, setDataCollapsed] = useState(false);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+  const [visualsCollapsed, setVisualsCollapsed] = useState(true);
+  const [dataCollapsed, setDataCollapsed] = useState(true);
   const [dataMenuOpen, setDataMenuOpen] = useState(false);
   const [pages, setPages] = useState<ReportPage[]>([
     { id: "page-1", name: "Page 1" },
@@ -1346,6 +1346,49 @@ export default function DashboardBuilder() {
     );
   };
 
+  const renderEmptyReportPrompt = () => (
+    <View style={styles.emptyReportPrompt}>
+      <Text style={styles.emptyReportTitle}>Add data to your report</Text>
+      <Text style={styles.emptyReportSubtitle}>
+        Once loaded, your data will appear in the Data pane.
+      </Text>
+
+      <View style={styles.emptyActionCards}>
+        <TouchableOpacity style={styles.emptyActionCard} onPress={openFilePicker}>
+          <View style={[styles.emptyActionIcon, styles.excelActionIcon]}>
+            <MaterialCommunityIcons name={"microsoft-excel" as any} size={24} color="#107c41" />
+          </View>
+          <Text style={styles.emptyActionText}>Import data from Excel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.emptyActionCard} onPress={resetDemoData}>
+          <View style={[styles.emptyActionIcon, styles.sqlActionIcon]}>
+            <MaterialCommunityIcons name={"database-cog-outline" as any} size={24} color="#0078d4" />
+          </View>
+          <Text style={styles.emptyActionText}>Import data from SQL Server</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.emptyActionCard} onPress={resetDemoData}>
+          <View style={[styles.emptyActionIcon, styles.blankActionIcon]}>
+            <MaterialCommunityIcons name={"table-plus" as any} size={24} color="#8a6d1f" />
+          </View>
+          <Text style={styles.emptyActionText}>Paste data into a blank table</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.emptyActionCard} onPress={askAi}>
+          <View style={[styles.emptyActionIcon, styles.sampleActionIcon]}>
+            <MaterialCommunityIcons name={"database-import-outline" as any} size={24} color="#607d8b" />
+          </View>
+          <Text style={styles.emptyActionText}>Use sample data</Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity onPress={() => setDataMenuOpen(true)}>
+        <Text style={styles.otherSourceLink}>Get data from another source →</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.page}>
       <input
@@ -1485,6 +1528,7 @@ export default function DashboardBuilder() {
                   <div style={zoomFrameStyle}>
                     <div style={zoomStageStyle}>
                       <View style={[styles.reportBoundary, reportBoundaryStyle]}>
+                        {!activePageWidgets.length && renderEmptyReportPrompt()}
                         <ResponsiveGridLayout
                           className="layout"
                           width={reportStageWidth}
@@ -2295,7 +2339,9 @@ const styles = StyleSheet.create({
 
   reportShell: {
     flex: 1,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 0,
     backgroundColor: "#ffffff",
   },
 
@@ -2305,10 +2351,93 @@ const styles = StyleSheet.create({
   },
 
   reportBoundary: {
+    position: "relative",
     borderWidth: 1,
     borderColor: "#555555",
     borderStyle: "dotted",
     backgroundColor: "#ffffff",
+  },
+
+  emptyReportPrompt: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    zIndex: 5,
+  },
+
+  emptyReportTitle: {
+    color: "#2f2f2f",
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 10,
+  },
+
+  emptyReportSubtitle: {
+    color: "#303030",
+    fontSize: 14,
+    marginBottom: 22,
+    textAlign: "center",
+  },
+
+  emptyActionCards: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 10,
+  },
+
+  emptyActionCard: {
+    width: 150,
+    minHeight: 92,
+    borderWidth: 1,
+    borderColor: "#e2e2e2",
+    backgroundColor: "#ffffff",
+    shadowColor: "#000000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+
+  emptyActionIcon: {
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  excelActionIcon: {
+    backgroundColor: "#ccebd8",
+  },
+
+  sqlActionIcon: {
+    backgroundColor: "#e9f3fb",
+  },
+
+  blankActionIcon: {
+    backgroundColor: "#fbfaf0",
+  },
+
+  sampleActionIcon: {
+    backgroundColor: "#f1f1f1",
+  },
+
+  emptyActionText: {
+    color: "#222222",
+    fontSize: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    textAlign: "center",
+  },
+
+  otherSourceLink: {
+    color: "#0078a8",
+    fontSize: 13,
+    marginTop: 12,
+    fontWeight: "600",
   },
 
   bottomBar: {
