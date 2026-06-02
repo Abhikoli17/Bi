@@ -413,7 +413,6 @@ export default function DashboardBuilder() {
   ]);
   const [activePageId, setActivePageId] = useState("page-1");
   const [zoomPercent, setZoomPercent] = useState(68);
-
   const [widgets, setWidgets] = useState<Widget[]>([]);
 
   const [datasets, setDatasets] = useState<any[]>(demoDatasets);
@@ -1583,16 +1582,29 @@ export default function DashboardBuilder() {
           <View style={styles.bottomBar}>
             <View style={styles.pageTabs}>
               {pages.map((page) => (
-                <TouchableOpacity
+                <View
                   key={page.id}
                   style={[
                     styles.pageTab,
                     activePageId === page.id && styles.activePageTab,
                   ]}
-                  onPress={() => setActivePageId(page.id)}
                 >
-                  <Text style={styles.pageTabText}>{page.name}</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.pageTabButton}
+                    onPress={() => setActivePageId(page.id)}
+                  >
+                    <Text style={styles.pageTabText}>{page.name}</Text>
+                  </TouchableOpacity>
+
+                  {page.id !== "page-1" && (
+                    <TouchableOpacity
+                      style={styles.pageCloseButton}
+                      onPress={() => removePage(page.id)}
+                    >
+                      <Text style={styles.pageCloseText}>x</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               ))}
               <TouchableOpacity style={styles.addPageButton} onPress={addPage}>
                 <Text style={styles.addPageText}>+</Text>
@@ -2534,9 +2546,10 @@ const styles = StyleSheet.create({
 
   pageTab: {
     minWidth: 92,
-    paddingHorizontal: 18,
+    paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
     backgroundColor: "#2f2f2f",
     borderBottomWidth: 3,
     borderRightWidth: 1,
@@ -2548,10 +2561,34 @@ const styles = StyleSheet.create({
     borderBottomColor: "#00b294",
   },
 
+  pageTabButton: {
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   pageTabText: {
     color: "#ffffff",
     fontSize: 12,
     fontWeight: "700",
+  },
+
+  pageCloseButton: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 2,
+  },
+
+  pageCloseText: {
+    color: "#d6d6d6",
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 16,
   },
 
   addPageButton: {
