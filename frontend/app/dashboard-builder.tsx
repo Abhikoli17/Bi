@@ -558,6 +558,9 @@ export default function DashboardBuilder() {
   const titleTabs = selectedWidget
     ? ["File", "Home", "Insert", "Modeling", "View", "Optimize", "Help", "Format", "Data / Drill"]
     : ["File", "Home", "Insert", "Modeling", "View", "Optimize", "Help"];
+  const statusDatasetName = selectedDatasetIsUploaded
+    ? selectedDataset?.name
+    : "No uploaded data";
   const activePageIndex = pages.findIndex((page) => page.id === activePageId);
   const zoomScale = zoomPercent / 100;
   const zoomThumbOffset = ((zoomPercent - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 86;
@@ -1478,6 +1481,33 @@ export default function DashboardBuilder() {
         onChange={handleFileUpload}
       />
 
+      <View style={styles.appChrome}>
+        <View style={styles.appChromeLeft}>
+          <MaterialCommunityIcons name={"content-save-outline" as any} size={16} color="#d8d8d8" />
+          <MaterialCommunityIcons name={"undo" as any} size={16} color="#6f6f6f" />
+          <MaterialCommunityIcons name={"redo" as any} size={16} color="#6f6f6f" />
+          <Text style={styles.appTitle}>Untitled - Power BI Desktop</Text>
+        </View>
+
+        <View style={styles.searchBox}>
+          <MaterialCommunityIcons name={"magnify" as any} size={16} color="#cfcfcf" />
+          <Text style={styles.searchPlaceholder}>Search</Text>
+        </View>
+
+        <View style={styles.appChromeRight}>
+          <Text style={styles.signInText}>Sign in</Text>
+          <MaterialCommunityIcons name={"account-circle-outline" as any} size={19} color="#8f8f8f" />
+          <TouchableOpacity style={styles.askAiButton} onPress={askAi}>
+            <MaterialCommunityIcons name={"creation" as any} size={14} color="#111111" />
+            <Text style={styles.askAiText}>Ask AI</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareButton} onPress={saveDashboard}>
+            <MaterialCommunityIcons name={"share-variant" as any} size={14} color="#ffffff" />
+            <Text style={styles.shareText}>Share</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <View style={styles.titleBar}>
         <View style={styles.tabs}>
           {titleTabs.map(
@@ -1498,18 +1528,6 @@ export default function DashboardBuilder() {
               </TouchableOpacity>
             )
           )}
-        </View>
-
-        <View style={styles.titleActions}>
-          <TouchableOpacity style={styles.askAiButton} onPress={askAi}>
-            <MaterialCommunityIcons name={"creation" as any} size={14} color="#111111" />
-            <Text style={styles.askAiText}>Ask AI</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.shareButton} onPress={saveDashboard}>
-            <MaterialCommunityIcons name={"share-variant" as any} size={14} color="#ffffff" />
-            <Text style={styles.shareText}>Share</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -1569,7 +1587,7 @@ export default function DashboardBuilder() {
 
       <View style={styles.statusBar}>
         <Text style={styles.statusText}>Tab: {activeTab}</Text>
-        <Text style={styles.statusText}>Dataset: {selectedDataset?.name}</Text>
+        <Text style={styles.statusText}>Dataset: {statusDatasetName}</Text>
         <Text style={styles.statusText}>Visuals: {activePageWidgets.length}</Text>
       </View>
 
@@ -1931,13 +1949,16 @@ export default function DashboardBuilder() {
                     ))}
                   </View>
 
-                  {[
-                    ["Y-axis", selectedWidget?.valueField],
-                    ["X-axis", selectedWidget?.xField],
-                    ["Legend", undefined],
-                    ["Small multiples", undefined],
-                    ["Tooltips", undefined],
-                  ].map(([label, value]) => (
+                  {(selectedWidget
+                    ? [
+                        ["Y-axis", selectedWidget?.valueField],
+                        ["X-axis", selectedWidget?.xField],
+                        ["Legend", undefined],
+                        ["Small multiples", undefined],
+                        ["Tooltips", undefined],
+                      ]
+                    : [["Values", undefined]]
+                  ).map(([label, value]) => (
                     <View key={label} style={styles.fieldWellSection}>
                       <Text style={styles.dropZoneTitle}>{label}</Text>
                       <TouchableOpacity style={styles.valuesDropZone}>
@@ -2156,8 +2177,62 @@ const styles = StyleSheet.create({
     backgroundColor: "#1f1f1f",
   },
 
+  appChrome: {
+    height: 34,
+    backgroundColor: "#111111",
+    borderBottomWidth: 1,
+    borderBottomColor: "#202020",
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  appChromeLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  appTitle: {
+    color: "#d8d8d8",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+
+  searchBox: {
+    width: 400,
+    height: 26,
+    backgroundColor: "#1f1f1f",
+    borderWidth: 1,
+    borderColor: "#242424",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    gap: 8,
+  },
+
+  searchPlaceholder: {
+    color: "#cfcfcf",
+    fontSize: 13,
+  },
+
+  appChromeRight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+
+  signInText: {
+    color: "#f0f0f0",
+    fontSize: 12,
+  },
+
   titleBar: {
-    height: 42,
+    height: 36,
     backgroundColor: "#111111",
     borderBottomWidth: 1,
     borderBottomColor: "#2a2a2a",
@@ -2173,7 +2248,7 @@ const styles = StyleSheet.create({
   },
 
   tab: {
-    height: 42,
+    height: 36,
     paddingHorizontal: 12,
     justifyContent: "center",
   },
@@ -2202,8 +2277,8 @@ const styles = StyleSheet.create({
 
   askAiButton: {
     backgroundColor: "#ffffff",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
     borderRadius: 9,
     flexDirection: "row",
     alignItems: "center",
@@ -2233,7 +2308,7 @@ const styles = StyleSheet.create({
   },
 
   ribbon: {
-    height: 104,
+    height: 98,
     backgroundColor: "#252525",
     borderBottomWidth: 1,
     borderBottomColor: "#343434",
