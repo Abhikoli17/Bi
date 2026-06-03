@@ -296,11 +296,14 @@ const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
     { title: "File", items: ["New report", "Open", "Save", "Export"] },
   ],
   Home: [
-    { title: "Data", items: ["Get data", "Excel", "SQL Server", "Enter data"] },
+    { title: "Clipboard", items: ["Paste", "Cut", "Copy", "Format painter"] },
+    { title: "Data", items: ["Get data", "Excel", "OneLake catalog", "SQL Server", "Enter data", "Dataverse", "Recent sources"] },
     { title: "Queries", items: ["Transform data", "Refresh"] },
     { title: "Insert", items: ["New visual", "Text box", "More visuals"] },
-    { title: "Calculations", items: ["New measure", "Quick measure"] },
+    { title: "Calculations", items: ["New calculation", "New measure", "Quick measure"] },
+    { title: "Sensitivity", items: ["Sensitivity"] },
     { title: "Share", items: ["Publish", "Share"] },
+    { title: "Copilot", items: ["Prep data for Copilot"] },
   ],
   Insert: [
     { title: "Pages", items: ["New page"] },
@@ -329,27 +332,59 @@ const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
   Help: [
     { title: "Help", items: ["Learn", "Documentation", "About"] },
   ],
+  Format: [
+    { title: "Current selection", items: ["Format visual", "Edit interactions", "Bring forward", "Send backward"] },
+    { title: "Visual options", items: ["Align", "Group", "Selection", "Lock objects"] },
+  ],
+  "Data / Drill": [
+    { title: "Drill", items: ["Drill up", "Drill down", "Expand all", "Show next level"] },
+    { title: "Data point", items: ["See data", "Include", "Exclude"] },
+  ],
 };
 
 const getRibbonIcon = (label: string) => {
   const icons: Record<string, string> = {
     "Get data": "database-plus-outline",
+    Paste: "clipboard-outline",
+    Cut: "content-cut",
+    Copy: "content-copy",
+    "Format painter": "format-paint",
     Excel: "microsoft-excel",
+    "OneLake catalog": "cloud-outline",
     "SQL Server": "database-cog-outline",
     "Enter data": "table-plus",
+    Dataverse: "database-sync-outline",
+    "Recent sources": "database-clock-outline",
     "Transform data": "table-edit",
     Refresh: "refresh",
     "New visual": "chart-bar",
     "Text box": "format-textbox",
     "More visuals": "chart-box-plus-outline",
+    "New calculation": "function-variant",
     "New measure": "calculator-variant-outline",
     "Quick measure": "lightning-bolt-outline",
+    Sensitivity: "shield-lock-outline",
     Publish: "upload-outline",
     Share: "share-variant",
+    "Prep data for Copilot": "creation",
     Save: "content-save-outline",
     Export: "export-variant",
     Open: "folder-open-outline",
     "New report": "file-chart-outline",
+    "Format visual": "format-paint",
+    "Edit interactions": "gesture-tap",
+    "Bring forward": "arrange-bring-forward",
+    "Send backward": "arrange-send-backward",
+    Align: "align-horizontal-left",
+    Group: "group",
+    "Lock objects": "lock-outline",
+    "Drill up": "arrow-up-bold-outline",
+    "Drill down": "arrow-down-bold-outline",
+    "Expand all": "arrow-expand-all",
+    "Show next level": "arrow-decision",
+    "See data": "table-eye",
+    Include: "filter-plus-outline",
+    Exclude: "filter-minus-outline",
   };
 
   return icons[label] ?? "square-rounded-outline";
@@ -425,6 +460,7 @@ export default function DashboardBuilder() {
   const [allPageFilterFields, setAllPageFilterFields] = useState<string[]>([]);
   const [savedDatasetIds, setSavedDatasetIds] = useState<string[]>([]);
   const [activeVisualMode, setActiveVisualMode] = useState<VisualPaneMode>("build");
+  const [reportMessageVisible, setReportMessageVisible] = useState(true);
 
   const selectedFields = useMemo(
     () => (selectedDataset?.columns?.length ? selectedDataset.columns : fallbackFields),
@@ -519,6 +555,10 @@ export default function DashboardBuilder() {
     width: reportStageWidth,
     minHeight: REPORT_MIN_HEIGHT,
   };
+  const titleTabs = selectedWidget
+    ? ["File", "Home", "Insert", "Modeling", "View", "Optimize", "Help", "Format", "Data / Drill"]
+    : ["File", "Home", "Insert", "Modeling", "View", "Optimize", "Help"];
+  const activePageIndex = pages.findIndex((page) => page.id === activePageId);
   const zoomScale = zoomPercent / 100;
   const zoomThumbOffset = ((zoomPercent - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 86;
   const zoomFrameStyle = {
@@ -583,6 +623,13 @@ export default function DashboardBuilder() {
     setSelectedWidgetId(activePageWidgets[0]?.id ?? "");
   }, [activePageId, activePageWidgets, selectedWidget]);
 
+  useEffect(() => {
+    if (selectedWidget) return;
+    if (activeTab === "Format" || activeTab === "Data / Drill") {
+      setActiveTab("Home");
+    }
+  }, [activeTab, selectedWidget]);
+
   const createLayout = (type: WidgetType, index: number) => ({
     x: (index * 3) % 12,
     y: Infinity,
@@ -606,6 +653,7 @@ export default function DashboardBuilder() {
     ]);
     setActivePageId(id);
     setSelectedWidgetId("");
+    setReportMessageVisible(true);
   };
 
   const removePage = (pageId: string) => {
@@ -648,6 +696,7 @@ export default function DashboardBuilder() {
     ]);
 
     setSelectedWidgetId(id);
+    setReportMessageVisible(false);
   };
 
   const addVisualFromPane = (type: WidgetType) => {
@@ -945,14 +994,28 @@ export default function DashboardBuilder() {
         setSelectedWidgetId("");
         setPages([{ id: "page-1", name: "Page 1" }]);
         setActivePageId("page-1");
+        setReportMessageVisible(true);
       },
       Open: resetDemoData,
       Save: saveDashboard,
       Export: saveDashboard,
       "Get data": () => setDataMenuOpen((open) => !open),
+      Paste: () => Alert.alert("Paste", "Paste data into a blank table is available from the report prompt."),
+      Cut: () => Alert.alert("Cut", "Select a visual first, then delete or duplicate it from Visualizations."),
+      Copy: duplicateSelectedVisual,
+      "Format painter": () => {
+        setVisualsCollapsed(false);
+        setActiveVisualMode("format");
+      },
       Excel: openFilePicker,
+      "OneLake catalog": resetDemoData,
       "SQL Server": resetDemoData,
       "Enter data": resetDemoData,
+      Dataverse: resetDemoData,
+      "Recent sources": () => {
+        setDataCollapsed(false);
+        setDataMenuOpen(false);
+      },
       "Transform data": () =>
         Alert.alert("Transform data", "Demo mode: fields are ready in the Data pane."),
       Refresh: loadDatasets,
@@ -969,6 +1032,7 @@ export default function DashboardBuilder() {
       Shapes: () => Alert.alert("Shape added", "Demo mode: shape controls can be mocked here."),
       Image: () => Alert.alert("Image added", "Demo mode: image controls can be mocked here."),
       "New page": addPage,
+      "New calculation": () => addWidget("kpi"),
       "New measure": () => addWidget("kpi"),
       "Quick measure": () => addWidget("line"),
       "New column": () => Alert.alert("New column", "Demo mode: calculated column created."),
@@ -997,6 +1061,25 @@ export default function DashboardBuilder() {
       "Optimization presets": () =>
         Alert.alert("Optimization", "Demo mode: optimized for fewer visuals and simpler queries."),
       "Apply all slicers": () => Alert.alert("Slicers", "All demo slicers applied."),
+      Sensitivity: () => Alert.alert("Sensitivity", "Sensitivity labels are mocked in this prototype."),
+      "Prep data for Copilot": askAi,
+      "Format visual": () => {
+        setVisualsCollapsed(false);
+        setActiveVisualMode("format");
+      },
+      "Edit interactions": () => Alert.alert("Edit interactions", "Select a visual to configure interactions."),
+      "Bring forward": () => Alert.alert("Arrange", "Visual layer controls are mocked in this prototype."),
+      "Send backward": () => Alert.alert("Arrange", "Visual layer controls are mocked in this prototype."),
+      Align: () => Alert.alert("Align", "Alignment controls are mocked in this prototype."),
+      Group: () => Alert.alert("Group", "Grouping controls are mocked in this prototype."),
+      "Lock objects": () => Alert.alert("Lock objects", "Canvas object locking is mocked in this prototype."),
+      "Drill up": () => setActiveVisualMode("analytics"),
+      "Drill down": () => setActiveVisualMode("analytics"),
+      "Expand all": () => setActiveVisualMode("analytics"),
+      "Show next level": () => setActiveVisualMode("analytics"),
+      "See data": () => setActiveRail("Data"),
+      Include: () => addFilterField("page"),
+      Exclude: () => Alert.alert("Exclude", "Select values on a visual to exclude them."),
       Learn: () => Alert.alert("Help", "Select a visual, then click fields to bind data."),
       Documentation: () => Alert.alert("Help", "This is a Power BI-style dashboard prototype."),
       About: () => Alert.alert("About", "InsightEngine dashboard builder demo."),
@@ -1397,7 +1480,7 @@ export default function DashboardBuilder() {
 
       <View style={styles.titleBar}>
         <View style={styles.tabs}>
-          {["File", "Home", "Insert", "Modeling", "View", "Optimize", "Help"].map(
+          {titleTabs.map(
             (tab) => (
               <TouchableOpacity
                 key={tab}
@@ -1518,6 +1601,17 @@ export default function DashboardBuilder() {
           ) : (
           <>
           <View style={styles.reportShell}>
+            {!activePageWidgets.length && reportMessageVisible && (
+              <View style={styles.reportMessageBar}>
+                <MaterialCommunityIcons name={"information-outline" as any} size={15} color="#9ad3ff" />
+                <Text style={styles.reportMessageText}>
+                  You need data to build a visual. Select Get Data to add some.
+                </Text>
+                <TouchableOpacity onPress={() => setReportMessageVisible(false)}>
+                  <Text style={styles.reportMessageClose}>x</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             <View style={styles.reportCanvas}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <ScrollView showsVerticalScrollIndicator={false}>
@@ -1580,6 +1674,9 @@ export default function DashboardBuilder() {
           </View>
 
           <View style={styles.bottomBar}>
+            <Text style={styles.pageStatusText}>
+              Page {Math.max(1, activePageIndex + 1)} of {pages.length}
+            </Text>
             <View style={styles.pageTabs}>
               {pages.map((page) => (
                 <View
@@ -2136,7 +2233,7 @@ const styles = StyleSheet.create({
   },
 
   ribbon: {
-    height: 98,
+    height: 104,
     backgroundColor: "#252525",
     borderBottomWidth: 1,
     borderBottomColor: "#343434",
@@ -2146,7 +2243,7 @@ const styles = StyleSheet.create({
   },
 
   ribbonGroup: {
-    minWidth: 132,
+    minWidth: 118,
     borderRightWidth: 1,
     borderRightColor: "#3a3a3a",
     paddingHorizontal: 8,
@@ -2157,11 +2254,11 @@ const styles = StyleSheet.create({
   ribbonItems: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 6,
   },
 
   ribbonButton: {
-    width: 58,
+    width: 54,
     alignItems: "center",
   },
 
@@ -2433,6 +2530,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
 
+  reportMessageBar: {
+    minHeight: 30,
+    backgroundColor: "#2b2b2b",
+    borderWidth: 1,
+    borderColor: "#3a3a3a",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    gap: 8,
+    marginBottom: 6,
+  },
+
+  reportMessageText: {
+    flex: 1,
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  reportMessageClose: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+    paddingHorizontal: 6,
+  },
+
   reportCanvas: {
     flex: 1,
     backgroundColor: "#ffffff",
@@ -2536,6 +2659,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderTopWidth: 1,
     borderTopColor: "#343434",
+  },
+
+  pageStatusText: {
+    color: "#d8d8d8",
+    fontSize: 12,
+    minWidth: 74,
+    paddingLeft: 10,
   },
 
   pageTabs: {
