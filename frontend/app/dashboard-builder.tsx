@@ -1255,6 +1255,8 @@ export default function DashboardBuilder() {
   };
 
   const renderRailWorkspace = () => {
+    const hasWorkingDataset = selectedDatasetIsUploaded || savedDatasetIds.includes(selectedDataset?._id);
+
     if (activeRail === "Data") {
       const previewRows = filteredRows.slice(0, 20);
 
@@ -1324,11 +1326,21 @@ export default function DashboardBuilder() {
             <Text style={styles.modeSubtitle}>Prototype query surface</Text>
           </View>
           <View style={styles.queryEditor}>
-            <Text style={styles.queryText}>EVALUATE</Text>
-            <Text style={styles.queryText}>SUMMARIZECOLUMNS(</Text>
-            <Text style={styles.queryText}>{`  "${selectedDataset?.name ?? "Dataset"}",`}</Text>
-            <Text style={styles.queryText}>{`  "Rows", COUNTROWS()`}</Text>
-            <Text style={styles.queryText}>)</Text>
+            {hasWorkingDataset ? (
+              <>
+                <Text style={styles.queryText}>EVALUATE</Text>
+                <Text style={styles.queryText}>SUMMARIZECOLUMNS(</Text>
+                <Text style={styles.queryText}>{`  "${selectedDataset?.name ?? "Dataset"}",`}</Text>
+                <Text style={styles.queryText}>{`  "Rows", COUNTROWS()`}</Text>
+                <Text style={styles.queryText}>)</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.queryText}>-- Load data first</Text>
+                <Text style={styles.queryText}>-- Use Get data, Excel, Text/CSV, or Use sample data.</Text>
+                <Text style={styles.queryText}>-- Your DAX query surface will appear here after a dataset is active.</Text>
+              </>
+            )}
           </View>
         </View>
       );
@@ -1342,12 +1354,27 @@ export default function DashboardBuilder() {
           <Text style={styles.modeSubtitle}>Semantic model definition preview</Text>
         </View>
         <View style={styles.queryEditor}>
-          <Text style={styles.queryText}>model {`{`}</Text>
-          <Text style={styles.queryText}>  culture: en-US</Text>
-          <Text style={styles.queryText}>  table {selectedDataset?.name ?? "Dataset"} {`{`}</Text>
-          <Text style={styles.queryText}>    column {selectedFields[0]?.name ?? "Column"}</Text>
-          <Text style={styles.queryText}>  {`}`}</Text>
-          <Text style={styles.queryText}>{`}`}</Text>
+          {hasWorkingDataset ? (
+            <>
+              <Text style={styles.queryText}>model {`{`}</Text>
+              <Text style={styles.queryText}>  culture: en-US</Text>
+              <Text style={styles.queryText}>  table {selectedDataset?.name ?? "Dataset"} {`{`}</Text>
+              {selectedFields.slice(0, 8).map((field: any) => (
+                <Text key={field.name} style={styles.queryText}>    column {field.name}</Text>
+              ))}
+              <Text style={styles.queryText}>  {`}`}</Text>
+              <Text style={styles.queryText}>{`}`}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.queryText}>{"// Load data first"}</Text>
+              <Text style={styles.queryText}>{"// The semantic model definition preview will appear here."}</Text>
+              <Text style={styles.queryText}>model {`{`}</Text>
+              <Text style={styles.queryText}>  culture: en-US</Text>
+              <Text style={styles.queryText}>{"  // no tables yet"}</Text>
+              <Text style={styles.queryText}>{`}`}</Text>
+            </>
+          )}
         </View>
       </View>
     );
@@ -1391,7 +1418,7 @@ export default function DashboardBuilder() {
       </View>
 
       <TouchableOpacity onPress={() => setDataMenuOpen(true)}>
-        <Text style={styles.otherSourceLink}>Get data from another source →</Text>
+        <Text style={styles.otherSourceLink}>Get data from another source -&gt;</Text>
       </TouchableOpacity>
     </View>
   );
