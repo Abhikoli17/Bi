@@ -27,6 +27,28 @@ import {
   YAxis,
 } from "recharts";
 
+import {
+  formatNumber,
+  sumMeasure,
+} from "../engines/daxEngine";
+
+import {
+  getCategoryFields,
+  getNumericFields,
+  groupRowsByField,
+} from "../engines/modelingEngine";
+
+import {
+  WidgetType,
+  visualTitles,
+  kpiVisualTypes,
+  pieVisualTypes,
+  mapVisualTypes,
+  tableVisualTypes,
+  areaVisualTypes,
+  lineVisualTypes,
+} from "../engines/visualizationEngine";
+
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 import * as XLSX from "xlsx";
 
@@ -44,36 +66,6 @@ declare global {
     }
   }
 }
-
-type WidgetType =
-  | "stacked-bar"
-  | "stacked-column"
-  | "area"
-  | "clustered-bar"
-  | "clustered-column"
-  | "hundred-bar"
-  | "hundred-column"
-  | "line"
-  | "stacked-area"
-  | "hundred-area"
-  | "line-stacked-column"
-  | "line-clustered-column"
-  | "ribbon"
-  | "waterfall"
-  | "funnel"
-  | "scatter"
-  | "pie"
-  | "donut"
-  | "treemap"
-  | "map"
-  | "filled-map"
-  | "shape-map"
-  | "card"
-  | "kpi"
-  | "slicer"
-  | "table"
-  | "matrix"
-  | "decomposition-tree";
 
 type VisualPaneMode = "build" | "format" | "analytics";
 
@@ -253,44 +245,6 @@ const leftRailItems = [
   { label: "TMDL view", value: "TMDL", icon: "file-document-edit-outline" },
 ];
 
-const visualTitles: Record<WidgetType, string> = {
-  "stacked-bar": "Stacked Bar Chart",
-  "stacked-column": "Stacked Column Chart",
-  area: "Area Chart",
-  "clustered-bar": "Clustered Bar Chart",
-  "clustered-column": "Clustered Column Chart",
-  "hundred-bar": "100% Clustered Bar Chart",
-  "hundred-column": "100% Clustered Column Chart",
-  line: "Line Chart",
-  "stacked-area": "Stacked Area Chart",
-  "hundred-area": "100% Stacked Area Chart",
-  "line-stacked-column": "Line and Stacked Column Chart",
-  "line-clustered-column": "Line and Clustered Column Chart",
-  ribbon: "Ribbon Chart",
-  waterfall: "Waterfall Chart",
-  funnel: "Funnel",
-  scatter: "Scatter Chart",
-  pie: "Pie Chart",
-  donut: "Donut Chart",
-  treemap: "Treemap",
-  map: "Map",
-  "filled-map": "Filled Map",
-  "shape-map": "Shape Map",
-  card: "Card",
-  kpi: "KPI",
-  slicer: "Slicer",
-  table: "Table",
-  matrix: "Matrix",
-  "decomposition-tree": "Decomposition Tree",
-};
-
-const kpiVisualTypes: WidgetType[] = ["kpi", "card"];
-const areaVisualTypes: WidgetType[] = ["area", "stacked-area", "hundred-area"];
-const lineVisualTypes: WidgetType[] = ["line"];
-const pieVisualTypes: WidgetType[] = ["pie", "donut"];
-const mapVisualTypes: WidgetType[] = ["map", "filled-map", "shape-map"];
-const tableVisualTypes: WidgetType[] = ["table", "matrix", "slicer", "decomposition-tree"];
-
 const ribbonTabs: Record<string, { title: string; items: string[] }[]> = {
   File: [
     { title: "File", items: ["New report", "Open", "Save", "Export"] },
@@ -425,14 +379,6 @@ const getVisualIcon = (type: WidgetType) => {
   return icons[type];
 };
 
-const isNumericValue = (value: unknown) =>
-  typeof value === "number" || (!Number.isNaN(Number(value)) && value !== "");
-
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 0,
-  }).format(value);
-
 export default function DashboardBuilder() {
   const { token } = useAuthStore();
   const { width: windowWidth } = useWindowDimensions();
@@ -485,20 +431,12 @@ export default function DashboardBuilder() {
   );
 
   const numericFields = useMemo(
-    () =>
-      selectedFields
-        .filter((field: any) =>
-          datasetRows.some((row: any) => isNumericValue(row[field.name]))
-        )
-        .map((field: any) => field.name),
+    () => getNumericFields(selectedFields, datasetRows),
     [datasetRows, selectedFields]
   );
 
   const categoryFields = useMemo(
-    () =>
-      selectedFields
-        .filter((field: any) => !numericFields.includes(field.name))
-        .map((field: any) => field.name),
+    () => getCategoryFields(selectedFields, numericFields),
     [numericFields, selectedFields]
   );
 
@@ -1124,17 +1062,7 @@ export default function DashboardBuilder() {
 
     if (!xField || !valueField) return sampleData;
 
-    const grouped = filteredRows.reduce((acc: Record<string, number>, row: any) => {
-      const key = String(row[xField] ?? "Blank");
-      const value = Number(row[valueField] ?? 0);
-      acc[key] = (acc[key] ?? 0) + (Number.isNaN(value) ? 0 : value);
-      return acc;
-    }, {});
-
-    return Object.entries(grouped).map(([name, value]) => ({
-      name,
-      value,
-    }));
+    return groupRowsByField(filteredRows, xField, valueField);
   };
 
   const getKpiData = (widget: Widget, index: number) => {
@@ -1143,10 +1071,7 @@ export default function DashboardBuilder() {
       widget.valueField && fieldNames.includes(widget.valueField)
         ? widget.valueField
         : defaultValueField;
-    const total = filteredRows.reduce((sum: number, row: any) => {
-      const value = Number(row[valueField] ?? 0);
-      return sum + (Number.isNaN(value) ? 0 : value);
-    }, 0);
+    const total = sumMeasure(filteredRows, valueField);
 
     return {
       title: widget.title || (index === 0 ? "Total Quantity" : `Total ${valueField}`),
