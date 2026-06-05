@@ -28,8 +28,8 @@ import {
 } from "recharts";
 
 import {
+  evaluateDaxExpression,
   formatNumber,
-  sumMeasure,
 } from "../engines/daxEngine";
 
 import {
@@ -1084,7 +1084,7 @@ export default function DashboardBuilder() {
       widget.valueField && fieldNames.includes(widget.valueField)
         ? widget.valueField
         : defaultValueField;
-    const total = sumMeasure(filteredRows, valueField);
+    const total = evaluateDaxExpression(`SUM(${valueField})`, filteredRows);
 
     return {
       title: widget.title || (index === 0 ? "Total Quantity" : `Total ${valueField}`),
