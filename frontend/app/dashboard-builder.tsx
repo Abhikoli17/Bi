@@ -67,8 +67,9 @@ import { canEditDashboard } from "../engines/securityEngine";
 
 import { createRefreshSchedule } from "../engines/refreshScheduler";
 
+import { parseSpreadsheetFile } from "../engines/dataConnectors";
+
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
-import * as XLSX from "xlsx";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -432,9 +433,9 @@ export default function DashboardBuilder() {
   );
 
   const activePageWidgets = useMemo(
-    () => widgets.filter((widget) => widget.pageId === activePageId),
+    () => getPageVisuals(widgets, activePageId),
     [activePageId, widgets]
-  );
+   );
 
   const selectedWidget = useMemo(
     () =>
@@ -445,6 +446,11 @@ export default function DashboardBuilder() {
 
   const datasetRows = useMemo(
     () => (selectedDataset?.rows?.length ? selectedDataset.rows : teaSalesRows),
+    [selectedDataset]
+  );
+
+  const semanticModel = useMemo(
+    () => createSemanticModel(selectedDataset),
     [selectedDataset]
   );
 
@@ -484,18 +490,10 @@ export default function DashboardBuilder() {
         : [],
     [dataSearch, selectedDatasetIsUploaded, selectedFields]
   );
-  const filteredRows = useMemo(() => {
-    const activeFilters = [...pageFilterFields, ...allPageFilterFields];
-
-    if (!activeFilters.length) return datasetRows;
-
-    return datasetRows.filter((row: any) =>
-      activeFilters.every((fieldName) => {
-        const value = row[fieldName];
-        return value !== undefined && value !== null && String(value).trim() !== "";
-      })
-    );
-  }, [allPageFilterFields, datasetRows, pageFilterFields]);
+  const filteredRows = useMemo(
+    () => queryRows(datasetRows, [...pageFilterFields, ...allPageFilterFields]),
+    [allPageFilterFields, datasetRows, pageFilterFields]
+  );
   const filtersPaneWidth = filtersCollapsed ? 36 : 190;
   const rightPaneWidth =
     visualsCollapsed && dataCollapsed
@@ -601,16 +599,10 @@ export default function DashboardBuilder() {
       .map((page) => Number(page.name.replace("Page ", "")))
       .filter((pageNumber) => !Number.isNaN(pageNumber));
     const nextPageNumber = Math.max(1, ...usedPageNumbers) + 1;
-    const id = `page-${Date.now()}`;
+    const nextPage = createPage(nextPageNumber);
 
-    setPages((prev) => [
-      ...prev,
-      {
-        id,
-        name: `Page ${nextPageNumber}`,
-      },
-    ]);
-    setActivePageId(id);
+    setPages((prev) => [...prev, nextPage]);
+    setActivePageId(nextPage.id);
     setSelectedWidgetId("");
     setReportMessageVisible(true);
   };
@@ -623,7 +615,7 @@ export default function DashboardBuilder() {
       pages[pageIndex - 1] ?? pages.find((page) => page.id !== pageId) ?? pages[0];
 
     setPages((prev) => prev.filter((page) => page.id !== pageId));
-    setWidgets((prev) => prev.filter((widget) => widget.pageId !== pageId));
+    setWidgets((prev) => deletePageVisuals(prev, pageId));
 
     if (activePageId === pageId) {
       setActivePageId(fallbackPage.id);
@@ -719,11 +711,25 @@ export default function DashboardBuilder() {
   };
 
   const saveDashboard = () => {
+    if (!canEditDashboard({ role: "editor" })) {
+      Alert.alert("Permission denied", "You do not have access to save this dashboard.");
+      return;
+    }
+
+    const dashboardJson = exportDashboardJson({
+      name: dashboardName,
+      pages,
+      widgets,
+      datasetName: selectedDataset?.name ?? null,
+    });
+
     Alert.alert(
       "Dashboard saved",
       `${dashboardName || "Untitled dashboard"} has ${pages.length} page${
         pages.length === 1 ? "" : "s"
-      } and ${widgets.length} visual${widgets.length === 1 ? "" : "s"}.`
+      } and ${widgets.length} visual${widgets.length === 1 ? "" : "s"}. Export size: ${
+        dashboardJson.length
+      } characters.`
     );
   };
 
@@ -789,32 +795,12 @@ export default function DashboardBuilder() {
     if (!file) return;
 
     try {
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-        defval: "",
-      });
+      const uploadedDataset = await parseSpreadsheetFile(file);
 
-      if (!rows.length) {
+      if (!uploadedDataset.rows.length) {
         Alert.alert("No data found", "The selected file does not contain rows.");
         return;
       }
-
-      const columnNames = Array.from(
-        rows.reduce((columns, row) => {
-          Object.keys(row).forEach((key) => columns.add(key));
-          return columns;
-        }, new Set<string>())
-      );
-
-      const uploadedDataset = {
-        _id: `uploaded-${Date.now()}`,
-        name: file.name.replace(/\.[^.]+$/, "") || "Uploaded data",
-        columns: columnNames.map((name) => ({ name })),
-        rows,
-      };
 
       setDatasets((prev) => [uploadedDataset, ...prev]);
       setSelectedDataset(uploadedDataset);
@@ -863,6 +849,9 @@ export default function DashboardBuilder() {
 
   const askAi = () => {
     const prefix = Date.now();
+    const suggestedVisual = detectVisualFromPrompt(
+      `show ${defaultValueField} trend and share by ${defaultXField}`
+    );
     const aiWidgets: Widget[] = [
       {
         id: `ai-kpi-${prefix}`,
@@ -875,7 +864,7 @@ export default function DashboardBuilder() {
       {
         id: `ai-bar-${prefix}`,
         pageId: activePageId,
-        type: "clustered-column",
+        type: suggestedVisual === "kpi" ? "clustered-column" : suggestedVisual,
         title: `${defaultValueField} by ${defaultXField}`,
         xField: defaultXField,
         valueField: defaultValueField,
@@ -977,7 +966,10 @@ export default function DashboardBuilder() {
       },
       "Transform data": () =>
         Alert.alert("Transform data", "Demo mode: fields are ready in the Data pane."),
-      Refresh: loadDatasets,
+      Refresh: () => {
+        createRefreshSchedule(15);
+        loadDatasets();
+      },
       "New visual": () => addWidget("clustered-column"),
       "Bar chart": () => addWidget("clustered-bar"),
       "Line chart": () => addWidget("line"),
@@ -1016,7 +1008,10 @@ export default function DashboardBuilder() {
         Alert.alert("Performance analyzer", `${activePageWidgets.length} visuals rendered.`),
       "Sync slicers": () => Alert.alert("Sync slicers", "Demo mode: slicers synced."),
       "Pause visuals": () => Alert.alert("Pause visuals", "Demo mode: visual updates paused."),
-      "Refresh visuals": loadDatasets,
+      "Refresh visuals": () => {
+        createRefreshSchedule(15);
+        loadDatasets();
+      },
       "Optimization presets": () =>
         Alert.alert("Optimization", "Demo mode: optimized for fewer visuals and simpler queries."),
       "Apply all slicers": () => Alert.alert("Slicers", "All demo slicers applied."),
@@ -1320,10 +1315,10 @@ export default function DashboardBuilder() {
           </View>
 
           <View style={styles.modelCanvas}>
-            {datasets.slice(0, 4).map((dataset: any) => (
-              <View key={dataset._id} style={styles.modelTable}>
-                <Text style={styles.modelTableTitle}>{dataset.name}</Text>
-                {(dataset.columns ?? []).slice(0, 6).map((field: any) => (
+            {semanticModel.tables.slice(0, 4).map((table: any) => (
+              <View key={table.name} style={styles.modelTable}>
+                <Text style={styles.modelTableTitle}>{table.name}</Text>
+                {(table.columns ?? []).slice(0, 6).map((field: any) => (
                   <Text key={field.name} style={styles.modelField}>
                     {field.name}
                   </Text>
@@ -1346,9 +1341,9 @@ export default function DashboardBuilder() {
           <View style={styles.queryEditor}>
             {hasWorkingDataset ? (
               <>
-                <Text style={styles.queryText}>EVALUATE</Text>
-                <Text style={styles.queryText}>SUMMARIZECOLUMNS(</Text>
-                <Text style={styles.queryText}>{`  "${selectedDataset?.name ?? "Dataset"}",`}</Text>
+              <Text style={styles.queryText}>EVALUATE</Text>
+              <Text style={styles.queryText}>SUMMARIZECOLUMNS(</Text>
+                <Text style={styles.queryText}>{`  "${semanticModel.tables[0]?.name ?? "Dataset"}",`}</Text>
                 <Text style={styles.queryText}>{`  "Rows", COUNTROWS()`}</Text>
                 <Text style={styles.queryText}>)</Text>
               </>
@@ -1376,8 +1371,8 @@ export default function DashboardBuilder() {
             <>
               <Text style={styles.queryText}>model {`{`}</Text>
               <Text style={styles.queryText}>  culture: en-US</Text>
-              <Text style={styles.queryText}>  table {selectedDataset?.name ?? "Dataset"} {`{`}</Text>
-              {selectedFields.slice(0, 8).map((field: any) => (
+              <Text style={styles.queryText}>  table {semanticModel.tables[0]?.name ?? "Dataset"} {`{`}</Text>
+              {(semanticModel.tables[0]?.columns ?? []).slice(0, 8).map((field: any) => (
                 <Text key={field.name} style={styles.queryText}>    column {field.name}</Text>
               ))}
               <Text style={styles.queryText}>  {`}`}</Text>

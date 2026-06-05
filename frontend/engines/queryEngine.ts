@@ -1,7 +1,10 @@
-export const queryRows = (
-  rows: any[],
-  filters: Record<string, any> = {}
-) =>
-  rows.filter((row) =>
-    Object.entries(filters).every(([field, value]) => row[field] === value)
+export const queryRows = (rows: any[], activeFilters: string[] = []) => {
+  if (!activeFilters.length) return rows;
+
+  return rows.filter((row) =>
+    activeFilters.every((fieldName) => {
+      const value = row[fieldName];
+      return value !== undefined && value !== null && String(value).trim() !== "";
+    })
   );
+};
