@@ -449,11 +449,6 @@ export default function DashboardBuilder() {
     [selectedDataset]
   );
 
-  const semanticModel = useMemo(
-    () => createSemanticModel(selectedDataset),
-    [selectedDataset]
-  );
-
   const numericFields = useMemo(
     () => getNumericFields(selectedFields, datasetRows),
     [datasetRows, selectedFields]
@@ -469,6 +464,10 @@ export default function DashboardBuilder() {
   const uploadedDatasets = useMemo(
     () => datasets.filter((dataset: any) => String(dataset._id).startsWith("uploaded-")),
     [datasets]
+  );
+  const semanticModel = useMemo(
+    () => createSemanticModel(uploadedDatasets.length ? uploadedDatasets : selectedDataset),
+    [selectedDataset, uploadedDatasets]
   );
   const filteredUploadedDatasets = useMemo(
     () =>
@@ -1325,6 +1324,30 @@ export default function DashboardBuilder() {
                 ))}
               </View>
             ))}
+
+            <View style={styles.relationshipPanel}>
+              <Text style={styles.relationshipTitle}>Relationships</Text>
+              {semanticModel.relationships.length ? (
+                semanticModel.relationships.map((relationship: any) => (
+                  <View
+                    key={`${relationship.sourceTable}-${relationship.sourceColumn}-${relationship.targetTable}-${relationship.targetColumn}`}
+                    style={styles.relationshipCard}
+                  >
+                    <Text style={styles.relationshipText}>
+                      {relationship.sourceTable}.{relationship.sourceColumn}
+                    </Text>
+                    <Text style={styles.relationshipArrow}>-></Text>
+                    <Text style={styles.relationshipText}>
+                      {relationship.targetTable}.{relationship.targetColumn}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.relationshipEmpty}>
+                  Upload multiple related tables to auto-detect relationships.
+                </Text>
+              )}
+            </View>
           </View>
         </View>
       );
@@ -1371,11 +1394,25 @@ export default function DashboardBuilder() {
             <>
               <Text style={styles.queryText}>model {`{`}</Text>
               <Text style={styles.queryText}>  culture: en-US</Text>
-              <Text style={styles.queryText}>  table {semanticModel.tables[0]?.name ?? "Dataset"} {`{`}</Text>
-              {(semanticModel.tables[0]?.columns ?? []).slice(0, 8).map((field: any) => (
-                <Text key={field.name} style={styles.queryText}>    column {field.name}</Text>
+              {semanticModel.tables.map((table: any) => (
+                <React.Fragment key={table.name}>
+                  <Text style={styles.queryText}>  table {table.name} {`{`}</Text>
+                  {(table.columns ?? []).slice(0, 8).map((field: any) => (
+                    <Text key={`${table.name}-${field.name}`} style={styles.queryText}>    column {field.name}</Text>
+                  ))}
+                  <Text style={styles.queryText}>  {`}`}</Text>
+                </React.Fragment>
               ))}
-              <Text style={styles.queryText}>  {`}`}</Text>
+              {semanticModel.relationships.map((relationship: any) => (
+                <React.Fragment
+                  key={`${relationship.sourceTable}-${relationship.sourceColumn}-${relationship.targetTable}-${relationship.targetColumn}`}
+                >
+                  <Text style={styles.queryText}>  relationship {`{`}</Text>
+                  <Text style={styles.queryText}>    fromColumn: {relationship.sourceTable}.{relationship.sourceColumn}</Text>
+                  <Text style={styles.queryText}>    toColumn: {relationship.targetTable}.{relationship.targetColumn}</Text>
+                  <Text style={styles.queryText}>  {`}`}</Text>
+                </React.Fragment>
+              ))}
               <Text style={styles.queryText}>{`}`}</Text>
             </>
           ) : (
@@ -2540,6 +2577,48 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderTopWidth: 1,
     borderTopColor: "#eeeeee",
+  },
+
+  relationshipPanel: {
+    width: 320,
+    borderWidth: 1,
+    borderColor: "#c8c8c8",
+    backgroundColor: "#ffffff",
+    padding: 10,
+  },
+
+  relationshipTitle: {
+    color: "#222222",
+    fontSize: 13,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+
+  relationshipCard: {
+    borderWidth: 1,
+    borderColor: "#dddddd",
+    backgroundColor: "#f8f8f8",
+    padding: 8,
+    marginBottom: 8,
+  },
+
+  relationshipText: {
+    color: "#222222",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  relationshipArrow: {
+    color: "#00a082",
+    fontSize: 14,
+    fontWeight: "900",
+    marginVertical: 3,
+  },
+
+  relationshipEmpty: {
+    color: "#666666",
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   queryEditor: {
