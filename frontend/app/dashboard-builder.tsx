@@ -1336,7 +1336,7 @@ export default function DashboardBuilder() {
                     <Text style={styles.relationshipText}>
                       {relationship.sourceTable}.{relationship.sourceColumn}
                     </Text>
-                    <Text style={styles.relationshipArrow}>-></Text>
+                    <Text style={styles.relationshipArrow}>-</Text>
                     <Text style={styles.relationshipText}>
                       {relationship.targetTable}.{relationship.targetColumn}
                     </Text>
