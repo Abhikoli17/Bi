@@ -597,6 +597,421 @@ export function unwrapOrDefault(
   return r.ok ? r.result.value : fallback;
 }
 
+// ─────────────────────────────────────────────────────────────
+// §15  TABLE RESULT TYPES
+// ─────────────────────────────────────────────────────────────
+
+/** A table-valued result returned by EVALUATE / SUMMARIZECOLUMNS. */
+export interface DaxTableResult {
+  /** Ordered column names matching each DataRow's keys. */
+  columns:   string[];
+  rows:      DataRow[];
+  elapsedMs: number;
+}
+
+export type DaxTableEvalResult =
+  | { ok: true;  table: DaxTableResult }
+  | { ok: false; error: DaxError };
+
+// ─────────────────────────────────────────────────────────────
+// §16  ARGUMENT SPLITTER
+//      Split a comma-delimited string respecting:
+//        • Nested parentheses   SUM(Sales[Amount])
+//        • Double-quoted labels "My Measure"
+//        • Single-quoted tables 'My Table'[Col]
+// ─────────────────────────────────────────────────────────────
+
+function splitArgs(src: string): string[] {
+  const args: string[] = [];
+  let depth = 0;
+  let inStr = false;
+  let strCh = "";
+  let cur   = "";
+
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (inStr) {
+      cur += ch;
+      if (ch === strCh) inStr = false;
+    } else if (ch === '"' || ch === "'") {
+      inStr = true; strCh = ch; cur += ch;
+    } else if (ch === "(") {
+      depth++; cur += ch;
+    } else if (ch === ")") {
+      depth--; cur += ch;
+    } else if (ch === "," && depth === 0) {
+      const t = cur.trim();
+      if (t) args.push(t);
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  const t = cur.trim();
+  if (t) args.push(t);
+  return args;
+}
+
+// ─────────────────────────────────────────────────────────────
+// §17  ARGUMENT CLASSIFIER
+// ─────────────────────────────────────────────────────────────
+
+/** Table[Column]  or  'Quoted Table'[Column] */
+const COL_REF_RE       = /^'?[^'"\[\]()][^"\[\]()]*'?\[[^\]]+\]$/;
+/** "double-quoted string" */
+const STR_LIT_RE       = /^"([^"]*)"$/;
+/** Any aggregate function call */
+const AGGREGATE_HEAD_RE = /^(SUM|COUNT|AVERAGE|MIN|MAX|COUNTROWS)\s*\(/i;
+
+type ArgKind = "colRef" | "strLit" | "aggregate" | "unknownFn";
+
+/** Looks like a function call but is not a known aggregate — e.g. BOGUS(...) */
+const FN_CALL_RE = /^[A-Za-z_]\w*\s*\(/;
+
+function classifyArg(arg: string): ArgKind {
+  if (COL_REF_RE.test(arg))        return "colRef";
+  if (STR_LIT_RE.test(arg))        return "strLit";
+  if (AGGREGATE_HEAD_RE.test(arg)) return "aggregate";
+  if (FN_CALL_RE.test(arg))        return "unknownFn";
+  return "strLit";
+}
+
+const stripDblQuotes = (s: string) => s.replace(/^"|"$/g, "").trim();
+
+/**
+ * Extract the table name from a  Table[Column]  or  'Table Name'[Column]  ref.
+ */
+function tableFromColRef(colRef: string): string {
+  return colRef
+    .trim()
+    .replace(/^'/, "")           // opening single-quote
+    .replace(/'?\[[^\]]*\]$/, "") // '[Column]' with optional leading quote
+    .trim();
+}
+
+// ─────────────────────────────────────────────────────────────
+// §18  SUMMARIZECOLUMNS ARGUMENT PARSER
+// ─────────────────────────────────────────────────────────────
+
+interface GroupByCol {
+  tableName:  string;
+  columnName: string;
+  /** Key used in result DataRow: "TableName[ColumnName]" */
+  displayKey: string;
+}
+
+interface SummarizeMeasure {
+  name:       string; // result column name
+  expression: string; // raw DAX expression evaluated per group
+}
+
+interface ParsedSummarize {
+  /** Optional table name gleaned from a bare string arg: "TableName" */
+  tableContext: string | null;
+  groupByCols:  GroupByCol[];
+  measures:     SummarizeMeasure[];
+}
+
+function parseSummarizeColumns(inner: string): ParsedSummarize | DaxError {
+  const args = splitArgs(inner);
+
+  const result: ParsedSummarize = {
+    tableContext: null,
+    groupByCols:  [],
+    measures:     [],
+  };
+
+  let i = 0;
+  while (i < args.length) {
+    const arg  = args[i];
+    const kind = classifyArg(arg);
+
+    if (kind === "colRef") {
+      // Sales[Region]  →  group-by column
+      result.groupByCols.push({
+        tableName:  tableFromColRef(arg),
+        columnName: normalizeDaxFieldName(arg),
+        displayKey: `${tableFromColRef(arg)}[${normalizeDaxFieldName(arg)}]`,
+      });
+      i++;
+
+    } else if (kind === "strLit") {
+      const name = stripDblQuotes(arg);
+      const next = args[i + 1];
+
+      const nextKind = next ? classifyArg(next) : null;
+
+      if (nextKind === "aggregate") {
+        // "MeasureName", AggExpr  →  measure pair
+        result.measures.push({ name, expression: next });
+        i += 2;
+      } else if (nextKind === "unknownFn") {
+        // Looks like a measure pair but the function is not supported
+        return {
+          code:    "PARSE_ERROR",
+          message: `Unsupported measure expression: "${next}". Supported: SUM | COUNT | AVERAGE | MIN | MAX | COUNTROWS.`,
+        };
+      } else {
+        // Bare string — table context hint:
+        // "Car Sales Data 2025" in SUMMARIZECOLUMNS("Car Sales Data 2025", "Rows", COUNTROWS())
+        if (!result.tableContext) result.tableContext = name;
+        i++;
+      }
+
+    } else {
+      // Bare aggregate with no label — use expression itself as the column name
+      result.measures.push({ name: arg, expression: arg });
+      i++;
+    }
+  }
+
+  if (result.groupByCols.length === 0 && result.measures.length === 0) {
+    return {
+      code:    "PARSE_ERROR",
+      message: "SUMMARIZECOLUMNS requires at least one group-by column or one measure.",
+    };
+  }
+
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// §19  SUMMARIZECOLUMNS INNER EXTRACTOR  (paren-balanced)
+//      Safely extracts the content inside SUMMARIZECOLUMNS(...)
+//      regardless of nested function calls or string literals.
+// ─────────────────────────────────────────────────────────────
+
+function extractSummarizeInner(body: string): string | null {
+  const fnMatch = body.match(/SUMMARIZECOLUMNS\s*\(/i);
+  if (!fnMatch || fnMatch.index === undefined) return null;
+
+  let i     = fnMatch.index + fnMatch[0].length;
+  let depth = 1;
+  let inStr = false;
+  let strCh = "";
+
+  while (i < body.length && depth > 0) {
+    const ch = body[i];
+    if (inStr) {
+      if (ch === strCh) inStr = false;
+    } else if (ch === '"' || ch === "'") {
+      inStr = true; strCh = ch;
+    } else if (ch === "(") {
+      depth++;
+    } else if (ch === ")") {
+      depth--;
+    }
+    i++;
+  }
+
+  if (depth !== 0) return null; // unclosed parenthesis
+
+  const contentStart = fnMatch.index + fnMatch[0].length;
+  return body.slice(contentStart, i - 1).trim();
+}
+
+// ─────────────────────────────────────────────────────────────
+// §20  GROUP BY ENGINE
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Partition rows into groups by a composite key derived from the
+ * given column keys.  No columns → single group containing all rows.
+ * Uses JSON.stringify per cell so numbers, strings, and nulls all
+ * produce distinct keys.
+ */
+function groupRowsByColumns(
+  rows:    DataRow[],
+  colKeys: string[]
+): Map<string, DataRow[]> {
+  if (colKeys.length === 0) return new Map([["__all__", rows]]);
+
+  const groups = new Map<string, DataRow[]>();
+  for (const row of rows) {
+    const key    = colKeys.map((k) => JSON.stringify(row[k] ?? null)).join("\x00");
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(row);
+    else groups.set(key, [row]);
+  }
+  return groups;
+}
+
+// ─────────────────────────────────────────────────────────────
+// §21  evaluateTable  —  PUBLIC API
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Execute an `EVALUATE SUMMARIZECOLUMNS(...)` query against the semantic model.
+ *
+ * The `EVALUATE` keyword is optional — the function accepts a bare
+ * `SUMMARIZECOLUMNS(...)` expression too.
+ *
+ * Never throws — returns a `DaxTableEvalResult` discriminated union.
+ *
+ * @example
+ * // Sales by region — matches Power BI's DAX query view output
+ * evaluateTable(`
+ *   EVALUATE
+ *   SUMMARIZECOLUMNS(
+ *     Sales[Region],
+ *     "Total Sales", SUM(Sales[Amount]),
+ *     "Orders",      COUNTROWS(Sales)
+ *   )
+ * `, model)
+ * // → {
+ * //   ok: true,
+ * //   table: {
+ * //     columns: ["Sales[Region]", "Total Sales", "Orders"],
+ * //     rows: [
+ * //       { "Sales[Region]": "East",  "Total Sales": 500,  "Orders": 1 },
+ * //       { "Sales[Region]": "North", "Total Sales": 1750, "Orders": 3 },
+ * //       { "Sales[Region]": "South", "Total Sales": 5500, "Orders": 2 },
+ * //       { "Sales[Region]": "West",  "Total Sales": 0,    "Orders": 1 },
+ * //     ]
+ * //   }
+ * // }
+ *
+ * @example
+ * // Screenshot query (table context string for COUNTROWS with no arg)
+ * evaluateTable(`
+ *   EVALUATE
+ *   SUMMARIZECOLUMNS(
+ *     "Sales",
+ *     "Rows", COUNTROWS()
+ *   )
+ * `, model)
+ * // → { ok: true, table: { columns: ["Rows"], rows: [{ Rows: 7 }] } }
+ */
+export function evaluateTable(
+  query:  string,
+  model:  SemanticModel,
+  filter: FilterContext = EMPTY_FILTER
+): DaxTableEvalResult {
+  const t0      = performance.now();
+  const elapsed = () => performance.now() - t0;
+  const fail    = (error: DaxError): DaxTableEvalResult => ({ ok: false, error });
+
+  try {
+    // ── Strip optional EVALUATE keyword ──────────────────────
+    const body = query.trim().replace(/^EVALUATE\s+/i, "").trim();
+
+    // ── Paren-balanced extraction of SUMMARIZECOLUMNS body ───
+    const inner = extractSummarizeInner(body);
+    if (inner === null) {
+      return fail({
+        code:       "PARSE_ERROR",
+        message:    `Expected SUMMARIZECOLUMNS(...). Got: "${body.slice(0, 60)}"`,
+        expression: query,
+      });
+    }
+
+    // ── Parse group-by columns and measure pairs ──────────────
+    const parsed = parseSummarizeColumns(inner);
+    if ("code" in parsed) return fail({ ...parsed, expression: query });
+
+    const { tableContext, groupByCols, measures } = parsed;
+
+    // ── Determine source table ────────────────────────────────
+    // Priority: groupBy col's table → tableContext string → inferred from measures
+    let sourceTableName: string | null =
+      groupByCols[0]?.tableName
+      ?? tableContext
+      ?? null;
+
+    if (!sourceTableName) {
+      for (const m of measures) {
+        const match = m.expression.match(TABLE_NAME_RE);
+        if (match) { sourceTableName = match[1].trim(); break; }
+      }
+    }
+
+    if (!sourceTableName) {
+      return fail({
+        code:       "PARSE_ERROR",
+        message:
+          "Cannot determine source table. " +
+          "Add a Table[Column] group-by, a table context string, or use Table[Column] in measures.",
+        expression: query,
+      });
+    }
+
+    const tableOrErr = resolveTable(model, sourceTableName);
+    if ("code" in tableOrErr) return fail({ ...tableOrErr, expression: query });
+    const sourceTable = tableOrErr;
+
+    // ── Resolve group-by columns (case-insensitive) ───────────
+    const resolvedGroupBy: Array<{ colKey: string; displayKey: string }> = [];
+    for (const col of groupByCols) {
+      const r = resolveColumn(model, col.tableName, col.columnName);
+      if ("code" in r) return fail({ ...r, expression: query });
+      resolvedGroupBy.push({ colKey: r.columnKey, displayKey: col.displayKey });
+    }
+
+    // ── Apply outer filter context ────────────────────────────
+    const filteredRows = applyFilter(sourceTable.rows, sourceTable.name, filter);
+
+    // ── Partition rows into groups ────────────────────────────
+    const colKeys = resolvedGroupBy.map((c) => c.colKey);
+    const groups  = groupRowsByColumns(filteredRows, colKeys);
+
+    // ── Build one result row per group ────────────────────────
+    const resultRows: DataRow[] = [];
+
+    for (const [, groupRows] of groups) {
+      const row: DataRow = {};
+
+      // Group-by column values (constant within a group — read from first row)
+      for (const col of resolvedGroupBy) {
+        row[col.displayKey] = groupRows[0]?.[col.colKey] ?? null;
+      }
+
+      // Measure values — each evaluated over the current group's row set
+      for (const measure of measures) {
+        // COUNTROWS() with no argument → row count of the current group.
+        // This matches Power BI behaviour: the "current row context" table.
+        if (/^COUNTROWS\s*\(\s*\)$/i.test(measure.expression)) {
+          row[measure.name] = groupRows.length;
+        } else {
+          // evaluateDaxExpression operates on the group's rows, so
+          // COUNTROWS(Sales), SUM(Sales[Amount]), etc. all see only the group.
+          row[measure.name] = evaluateDaxExpression(measure.expression, groupRows);
+        }
+      }
+
+      resultRows.push(row);
+    }
+
+    // ── Sort by group-by column values (stable, ascending) ────
+    if (resolvedGroupBy.length > 0) {
+      resultRows.sort((a, b) => {
+        for (const col of resolvedGroupBy) {
+          const av = String(a[col.displayKey] ?? "");
+          const bv = String(b[col.displayKey] ?? "");
+          if (av < bv) return -1;
+          if (av > bv) return  1;
+        }
+        return 0;
+      });
+    }
+
+    return {
+      ok: true,
+      table: {
+        columns:   [...resolvedGroupBy.map((c) => c.displayKey), ...measures.map((m) => m.name)],
+        rows:      resultRows,
+        elapsedMs: elapsed(),
+      },
+    };
+
+  } catch (e) {
+    return fail({
+      code:       "PARSE_ERROR",
+      message:    `Unexpected engine error: ${(e as Error).message}`,
+      expression: query,
+    });
+  }
+}
+
 
 
 
