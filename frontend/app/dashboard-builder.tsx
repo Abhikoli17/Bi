@@ -69,6 +69,8 @@ import { createRefreshSchedule } from "../engines/refreshScheduler";
 
 import { parseSpreadsheetFile } from "../engines/dataConnectors";
 
+import DaxQueryView from "./DaxQueryView";
+
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 
 import "react-grid-layout/css/styles.css";
@@ -1353,7 +1355,7 @@ export default function DashboardBuilder() {
       );
     }
 
-    if (activeRail === "DAX") {
+    /*if (activeRail === "DAX") {
       return (
         <View style={styles.modeWorkspace}>
           <View style={styles.modeHeader}>
@@ -1380,7 +1382,21 @@ export default function DashboardBuilder() {
           </View>
         </View>
       );
-    }
+    }*/
+
+    if (activeRail === "DAX") {
+  return (
+    <View style={styles.modeWorkspace}>
+      <View style={styles.modeHeader}>
+        <MaterialCommunityIcons name={"file-code-outline" as any} size={22} color="#00b294" />
+        <Text style={styles.modeTitle}>DAX query view</Text>
+        <Text style={styles.modeSubtitle}>Write and run DAX against your model</Text>
+      </View>
+      <DaxQueryView model={semanticModel} hasWorkingDataset={hasWorkingDataset} />
+    </View>
+  );
+}
+
 
     return (
       <View style={styles.modeWorkspace}>
