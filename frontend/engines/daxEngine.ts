@@ -776,13 +776,25 @@ function parseSummarizeColumns(inner: string): ParsedSummarize | DaxError {
 }
 
 // ─────────────────────────────────────────────────────────────
-// §19  SUMMARIZECOLUMNS INNER EXTRACTOR  (paren-balanced)
-//      Safely extracts the content inside SUMMARIZECOLUMNS(...)
-//      regardless of nested function calls or string literals.
+// §19  BALANCED FUNCTION-CALL EXTRACTOR
+//      Locate a named function call (e.g. SUMMARIZECOLUMNS, TOPN)
+//      and return its inner argument string plus the index right
+//      after its closing paren — so callers can inspect whatever
+//      text follows (an ORDER BY clause, in our case).
+//      Respects nested parens and both quote styles.
 // ─────────────────────────────────────────────────────────────
 
-function extractSummarizeInner(body: string): string | null {
-  const fnMatch = body.match(/SUMMARIZECOLUMNS\s*\(/i);
+interface BalancedCall {
+  inner:      string;
+  /** Index in `body` of the function name match. */
+  matchStart: number;
+  /** Index in `body` of the character right after the closing ')'. */
+  afterIndex: number;
+}
+
+function extractBalancedCall(body: string, fnName: string): BalancedCall | null {
+  const re      = new RegExp(`${fnName}\\s*\\(`, "i");
+  const fnMatch = body.match(re);
   if (!fnMatch || fnMatch.index === undefined) return null;
 
   let i     = fnMatch.index + fnMatch[0].length;
@@ -807,7 +819,11 @@ function extractSummarizeInner(body: string): string | null {
   if (depth !== 0) return null; // unclosed parenthesis
 
   const contentStart = fnMatch.index + fnMatch[0].length;
-  return body.slice(contentStart, i - 1).trim();
+  return {
+    inner:      body.slice(contentStart, i - 1).trim(),
+    matchStart: fnMatch.index,
+    afterIndex: i,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -837,15 +853,344 @@ function groupRowsByColumns(
 }
 
 // ─────────────────────────────────────────────────────────────
-// §21  evaluateTable  —  PUBLIC API
+// §21  SUMMARIZECOLUMNS CORE EVALUATOR
+//      Resolves the source table, group-by columns, and measures,
+//      then builds one result row per group. No EVALUATE / ORDER BY
+//      handling here — that's layered on by evaluateTable() and
+//      runTopN() so this core can be reused by both.
+// ─────────────────────────────────────────────────────────────
+
+interface TableCore {
+  columns: string[];
+  rows:    DataRow[];
+}
+
+type TableCoreResult =
+  | { ok: true;  table: TableCore }
+  | { ok: false; error: DaxError };
+
+function runSummarizeColumns(
+  inner:  string,
+  model:  SemanticModel,
+  filter: FilterContext
+): TableCoreResult {
+  const parsed = parseSummarizeColumns(inner);
+  if ("code" in parsed) return { ok: false, error: parsed };
+
+  const { tableContext, groupByCols, measures } = parsed;
+
+  // ── Determine source table ────────────────────────────────
+  // Priority: groupBy col's table → tableContext string → inferred from measures
+  let sourceTableName: string | null =
+    groupByCols[0]?.tableName
+    ?? tableContext
+    ?? null;
+
+  if (!sourceTableName) {
+    for (const m of measures) {
+      const match = m.expression.match(TABLE_NAME_RE);
+      if (match) { sourceTableName = match[1].trim(); break; }
+    }
+  }
+
+  if (!sourceTableName) {
+    return {
+      ok: false,
+      error: {
+        code:    "PARSE_ERROR",
+        message:
+          "Cannot determine source table. " +
+          "Add a Table[Column] group-by, a table context string, or use Table[Column] in measures.",
+      },
+    };
+  }
+
+  const tableOrErr = resolveTable(model, sourceTableName);
+  if ("code" in tableOrErr) return { ok: false, error: tableOrErr };
+  const sourceTable = tableOrErr;
+
+  // ── Resolve group-by columns (case-insensitive) ───────────
+  const resolvedGroupBy: Array<{ colKey: string; displayKey: string }> = [];
+  for (const col of groupByCols) {
+    const r = resolveColumn(model, col.tableName, col.columnName);
+    if ("code" in r) return { ok: false, error: r };
+    resolvedGroupBy.push({ colKey: r.columnKey, displayKey: col.displayKey });
+  }
+
+  // ── Apply outer filter context ────────────────────────────
+  const filteredRows = applyFilter(sourceTable.rows, sourceTable.name, filter);
+
+  // ── Partition rows into groups ────────────────────────────
+  const colKeys = resolvedGroupBy.map((c) => c.colKey);
+  const groups  = groupRowsByColumns(filteredRows, colKeys);
+
+  // ── Build one result row per group ────────────────────────
+  const resultRows: DataRow[] = [];
+
+  for (const [, groupRows] of groups) {
+    const row: DataRow = {};
+
+    // Group-by column values (constant within a group — read from first row)
+    for (const col of resolvedGroupBy) {
+      row[col.displayKey] = groupRows[0]?.[col.colKey] ?? null;
+    }
+
+    // Measure values — each evaluated over the current group's row set
+    for (const measure of measures) {
+      // COUNTROWS() with no argument → row count of the current group.
+      // This matches Power BI behaviour: the "current row context" table.
+      if (/^COUNTROWS\s*\(\s*\)$/i.test(measure.expression)) {
+        row[measure.name] = groupRows.length;
+      } else {
+        row[measure.name] = evaluateDaxExpression(measure.expression, groupRows);
+      }
+    }
+
+    resultRows.push(row);
+  }
+
+  // ── Default sort: by group-by column values (stable, ascending) ──
+  // Overridden by ORDER BY / TOPN when present.
+  if (resolvedGroupBy.length > 0) {
+    resultRows.sort((a, b) => {
+      for (const col of resolvedGroupBy) {
+        const av = String(a[col.displayKey] ?? "");
+        const bv = String(b[col.displayKey] ?? "");
+        if (av < bv) return -1;
+        if (av > bv) return  1;
+      }
+      return 0;
+    });
+  }
+
+  return {
+    ok: true,
+    table: {
+      columns: [...resolvedGroupBy.map((c) => c.displayKey), ...measures.map((m) => m.name)],
+      rows:    resultRows,
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// §22  ORDER BY / TOPN SUPPORT
+//      Shared sorting + column-reference resolution used by both
+//      the ORDER BY clause (evaluateTable) and TOPN's ranking args.
+// ─────────────────────────────────────────────────────────────
+
+type SortDirection = "ASC" | "DESC";
+
+interface SortSpec {
+  key:       string;
+  direction: SortDirection;
+}
+
+/**
+ * Compare two cell values for sorting.
+ * Nulls/undefined sort last regardless of direction.
+ * Numbers compare numerically; everything else compares as strings.
+ */
+function compareForSort(a: unknown, b: unknown): number {
+  const aNull = a === null || a === undefined;
+  const bNull = b === null || b === undefined;
+  if (aNull && bNull) return 0;
+  if (aNull) return 1;
+  if (bNull) return -1;
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b));
+}
+
+function sortRowsBySpecs(rows: DataRow[], specs: SortSpec[]): DataRow[] {
+  const sorted = [...rows];
+  sorted.sort((a, b) => {
+    for (const spec of specs) {
+      const cmp = compareForSort(a[spec.key], b[spec.key]);
+      if (cmp !== 0) return spec.direction === "DESC" ? -cmp : cmp;
+    }
+    return 0;
+  });
+  return sorted;
+}
+
+/**
+ * Normalise an ORDER BY / TOPN column reference to the form used as
+ * result column keys:
+ *
+ *   `[Total]`          → `"Total"`            (bracket-only measure ref)
+ *   `Sales[Region]`     → `"Sales[Region]"`     (already canonical)
+ *   `'My Table'[Col]`   → `"My Table[Col]"`     (quoted table name)
+ *   `Total`             → `"Total"`            (bare name)
+ */
+function normalizeOrderByRef(ref: string): string {
+  const trimmed = ref.trim();
+
+  const bracketOnly = trimmed.match(/^\[(.+)\]$/);
+  if (bracketOnly) return bracketOnly[1].trim();
+
+  if (COL_REF_RE.test(trimmed)) {
+    return `${tableFromColRef(trimmed)}[${normalizeDaxFieldName(trimmed)}]`;
+  }
+
+  return trimmed.replace(/^['"]|['"]$/g, "").trim();
+}
+
+/** Resolve a normalised ref against the actual result columns, case-insensitively. */
+function resolveOrderByColumn(ref: string, columns: string[]): string | null {
+  const normalized = normalizeOrderByRef(ref);
+  return columns.find((c) => c.toLowerCase() === normalized.toLowerCase()) ?? null;
+}
+
+const DIRECTION_TOKEN_RE = /^(ASC|DESC|0|1|TRUE|FALSE)$/i;
+
+/** Convert an ASC/DESC/0/1/TRUE/FALSE token to a SortDirection. */
+function toDirection(token: string): SortDirection {
+  const t = token.toUpperCase();
+  return (t === "ASC" || t === "1" || t === "TRUE") ? "ASC" : "DESC";
+}
+
+/**
+ * Parse a DAX `ORDER BY col1 [ASC|DESC], col2 [ASC|DESC], ...` clause body
+ * (the text after the `ORDER BY` keyword) into sort specs.
+ * Default direction when omitted is ASC — matching DAX's ORDER BY semantics.
+ */
+function parseOrderBySpecs(text: string, columns: string[]): SortSpec[] | DaxError {
+  const entries = splitArgs(text);
+  const specs: SortSpec[] = [];
+
+  for (const entry of entries) {
+    const trimmed  = entry.trim();
+    const dirMatch = trimmed.match(/^(.*\S)\s+(ASC|DESC)$/i);
+    const refRaw   = dirMatch ? dirMatch[1] : trimmed;
+    const direction: SortDirection = dirMatch
+      ? (dirMatch[2].toUpperCase() as SortDirection)
+      : "ASC";
+
+    const key = resolveOrderByColumn(refRaw, columns);
+    if (key === null) {
+      return {
+        code:    "UNKNOWN_COLUMN",
+        message: `ORDER BY reference "${refRaw}" does not match any result column. Available: ${columns.join(", ")}.`,
+      };
+    }
+    specs.push({ key, direction });
+  }
+
+  return specs;
+}
+
+/**
+ * Evaluate a `TOPN(n, SUMMARIZECOLUMNS(...), orderByExpr [, order] [, ...])` call.
+ *
+ * `n`              — number of rows to keep (0 or more).
+ * `orderByExpr`    — a result column reference: `[MeasureName]`, `Table[Column]`, or bare name.
+ * `order`          — optional: ASC | DESC | 0 | 1 | TRUE | FALSE. Default: DESC
+ *                     (matches DAX's TOPN convention — highest values first).
+ * Multiple orderByExpr/order pairs are supported for tie-breaking.
+ */
+function runTopN(
+  inner:  string,
+  model:  SemanticModel,
+  filter: FilterContext
+): TableCoreResult {
+  const args = splitArgs(inner);
+  if (args.length < 3) {
+    return {
+      ok: false,
+      error: {
+        code:    "PARSE_ERROR",
+        message: "TOPN requires at least 3 arguments: TOPN(n, table, orderBy_expression).",
+      },
+    };
+  }
+
+  const nArg = args[0].trim();
+  const n    = Number(nArg);
+  if (!Number.isFinite(n) || n < 0) {
+    return {
+      ok: false,
+      error: {
+        code:    "PARSE_ERROR",
+        message: `TOPN's first argument must be a non-negative number, got "${nArg}".`,
+      },
+    };
+  }
+
+  const tableExpr = args[1].trim();
+  const innerCall = extractBalancedCall(tableExpr, "SUMMARIZECOLUMNS");
+  if (!innerCall) {
+    return {
+      ok: false,
+      error: {
+        code:    "PARSE_ERROR",
+        message: `TOPN's table argument must be a SUMMARIZECOLUMNS(...) expression. Got: "${tableExpr.slice(0, 60)}"`,
+      },
+    };
+  }
+
+  const core = runSummarizeColumns(innerCall.inner, model, filter);
+  if ("error" in core) return core;
+
+  const { columns, rows } = core.table;
+
+  // ── Parse orderByExpr [, order] pairs ─────────────────────
+  const orderArgs = args.slice(2);
+  const specs: SortSpec[] = [];
+
+  let i = 0;
+  while (i < orderArgs.length) {
+    const refRaw = orderArgs[i].trim();
+    const key    = resolveOrderByColumn(refRaw, columns);
+    if (key === null) {
+      return {
+        ok: false,
+        error: {
+          code:    "UNKNOWN_COLUMN",
+          message: `TOPN orderBy reference "${refRaw}" does not match any result column. Available: ${columns.join(", ")}.`,
+        },
+      };
+    }
+
+    const next = orderArgs[i + 1]?.trim();
+    let direction: SortDirection = "DESC"; // TOPN default: highest first
+    let consumed = 1;
+    if (next !== undefined && DIRECTION_TOKEN_RE.test(next)) {
+      direction = toDirection(next);
+      consumed  = 2;
+    }
+    specs.push({ key, direction });
+    i += consumed;
+  }
+
+  if (specs.length === 0) {
+    return {
+      ok: false,
+      error: {
+        code:    "PARSE_ERROR",
+        message: "TOPN requires at least one orderBy_expression argument.",
+      },
+    };
+  }
+
+  const sorted  = sortRowsBySpecs(rows, specs);
+  const limited = n === 0 ? [] : sorted.slice(0, n);
+
+  return { ok: true, table: { columns, rows: limited } };
+}
+
+// ─────────────────────────────────────────────────────────────
+// §23  evaluateTable  —  PUBLIC API
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Execute an `EVALUATE SUMMARIZECOLUMNS(...)` query against the semantic model.
+ * Execute a DAX table-valued query against the semantic model.
  *
- * The `EVALUATE` keyword is optional — the function accepts a bare
- * `SUMMARIZECOLUMNS(...)` expression too.
+ * Supports:
+ *   EVALUATE SUMMARIZECOLUMNS(...)
+ *   EVALUATE SUMMARIZECOLUMNS(...) ORDER BY col [ASC|DESC], ...
+ *   EVALUATE TOPN(n, SUMMARIZECOLUMNS(...), orderByExpr [, order], ...)
+ *   EVALUATE TOPN(...) ORDER BY ...   (re-sorts TOPN's output deterministically)
  *
+ * The `EVALUATE` keyword is optional in all forms.
  * Never throws — returns a `DaxTableEvalResult` discriminated union.
  *
  * @example
@@ -857,30 +1202,19 @@ function groupRowsByColumns(
  *     "Total Sales", SUM(Sales[Amount]),
  *     "Orders",      COUNTROWS(Sales)
  *   )
+ *   ORDER BY [Total Sales] DESC
  * `, model)
- * // → {
- * //   ok: true,
- * //   table: {
- * //     columns: ["Sales[Region]", "Total Sales", "Orders"],
- * //     rows: [
- * //       { "Sales[Region]": "East",  "Total Sales": 500,  "Orders": 1 },
- * //       { "Sales[Region]": "North", "Total Sales": 1750, "Orders": 3 },
- * //       { "Sales[Region]": "South", "Total Sales": 5500, "Orders": 2 },
- * //       { "Sales[Region]": "West",  "Total Sales": 0,    "Orders": 1 },
- * //     ]
- * //   }
- * // }
  *
  * @example
- * // Screenshot query (table context string for COUNTROWS with no arg)
+ * // Top 3 regions by total sales
  * evaluateTable(`
  *   EVALUATE
- *   SUMMARIZECOLUMNS(
- *     "Sales",
- *     "Rows", COUNTROWS()
+ *   TOPN(
+ *     3,
+ *     SUMMARIZECOLUMNS(Sales[Region], "Total", SUM(Sales[Amount])),
+ *     [Total], DESC
  *   )
  * `, model)
- * // → { ok: true, table: { columns: ["Rows"], rows: [{ Rows: 7 }] } }
  */
 export function evaluateTable(
   query:  string,
@@ -895,112 +1229,51 @@ export function evaluateTable(
     // ── Strip optional EVALUATE keyword ──────────────────────
     const body = query.trim().replace(/^EVALUATE\s+/i, "").trim();
 
-    // ── Paren-balanced extraction of SUMMARIZECOLUMNS body ───
-    const inner = extractSummarizeInner(body);
-    if (inner === null) {
-      return fail({
-        code:       "PARSE_ERROR",
-        message:    `Expected SUMMARIZECOLUMNS(...). Got: "${body.slice(0, 60)}"`,
-        expression: query,
-      });
-    }
+    // ── Locate the top-level table expression: TOPN(...) or SUMMARIZECOLUMNS(...) ──
+    let core:       TableCoreResult;
+    let afterIndex: number;
 
-    // ── Parse group-by columns and measure pairs ──────────────
-    const parsed = parseSummarizeColumns(inner);
-    if ("code" in parsed) return fail({ ...parsed, expression: query });
-
-    const { tableContext, groupByCols, measures } = parsed;
-
-    // ── Determine source table ────────────────────────────────
-    // Priority: groupBy col's table → tableContext string → inferred from measures
-    let sourceTableName: string | null =
-      groupByCols[0]?.tableName
-      ?? tableContext
-      ?? null;
-
-    if (!sourceTableName) {
-      for (const m of measures) {
-        const match = m.expression.match(TABLE_NAME_RE);
-        if (match) { sourceTableName = match[1].trim(); break; }
+    if (/^TOPN\s*\(/i.test(body)) {
+      const call = extractBalancedCall(body, "TOPN");
+      if (!call) {
+        return fail({
+          code:       "PARSE_ERROR",
+          message:    `Malformed TOPN(...) call in: "${body.slice(0, 60)}"`,
+          expression: query,
+        });
       }
-    }
+      core       = runTopN(call.inner, model, filter);
+      afterIndex = call.afterIndex;
 
-    if (!sourceTableName) {
-      return fail({
-        code:       "PARSE_ERROR",
-        message:
-          "Cannot determine source table. " +
-          "Add a Table[Column] group-by, a table context string, or use Table[Column] in measures.",
-        expression: query,
-      });
-    }
-
-    const tableOrErr = resolveTable(model, sourceTableName);
-    if ("code" in tableOrErr) return fail({ ...tableOrErr, expression: query });
-    const sourceTable = tableOrErr;
-
-    // ── Resolve group-by columns (case-insensitive) ───────────
-    const resolvedGroupBy: Array<{ colKey: string; displayKey: string }> = [];
-    for (const col of groupByCols) {
-      const r = resolveColumn(model, col.tableName, col.columnName);
-      if ("code" in r) return fail({ ...r, expression: query });
-      resolvedGroupBy.push({ colKey: r.columnKey, displayKey: col.displayKey });
-    }
-
-    // ── Apply outer filter context ────────────────────────────
-    const filteredRows = applyFilter(sourceTable.rows, sourceTable.name, filter);
-
-    // ── Partition rows into groups ────────────────────────────
-    const colKeys = resolvedGroupBy.map((c) => c.colKey);
-    const groups  = groupRowsByColumns(filteredRows, colKeys);
-
-    // ── Build one result row per group ────────────────────────
-    const resultRows: DataRow[] = [];
-
-    for (const [, groupRows] of groups) {
-      const row: DataRow = {};
-
-      // Group-by column values (constant within a group — read from first row)
-      for (const col of resolvedGroupBy) {
-        row[col.displayKey] = groupRows[0]?.[col.colKey] ?? null;
+    } else {
+      const call = extractBalancedCall(body, "SUMMARIZECOLUMNS");
+      if (!call) {
+        return fail({
+          code:       "PARSE_ERROR",
+          message:    `Expected SUMMARIZECOLUMNS(...) or TOPN(...). Got: "${body.slice(0, 60)}"`,
+          expression: query,
+        });
       }
-
-      // Measure values — each evaluated over the current group's row set
-      for (const measure of measures) {
-        // COUNTROWS() with no argument → row count of the current group.
-        // This matches Power BI behaviour: the "current row context" table.
-        if (/^COUNTROWS\s*\(\s*\)$/i.test(measure.expression)) {
-          row[measure.name] = groupRows.length;
-        } else {
-          // evaluateDaxExpression operates on the group's rows, so
-          // COUNTROWS(Sales), SUM(Sales[Amount]), etc. all see only the group.
-          row[measure.name] = evaluateDaxExpression(measure.expression, groupRows);
-        }
-      }
-
-      resultRows.push(row);
+      core       = runSummarizeColumns(call.inner, model, filter);
+      afterIndex = call.afterIndex;
     }
 
-    // ── Sort by group-by column values (stable, ascending) ────
-    if (resolvedGroupBy.length > 0) {
-      resultRows.sort((a, b) => {
-        for (const col of resolvedGroupBy) {
-          const av = String(a[col.displayKey] ?? "");
-          const bv = String(b[col.displayKey] ?? "");
-          if (av < bv) return -1;
-          if (av > bv) return  1;
-        }
-        return 0;
-      });
+    if ("error" in core) return fail({ ...core.error, expression: query });
+
+    let { columns, rows } = core.table;
+
+    // ── Optional trailing ORDER BY clause ─────────────────────
+    const remainder    = body.slice(afterIndex).trim();
+    const orderByMatch = remainder.match(/^ORDER\s+BY\s+(.+)$/is);
+    if (orderByMatch) {
+      const specs = parseOrderBySpecs(orderByMatch[1], columns);
+      if (!Array.isArray(specs)) return fail({ ...specs, expression: query });
+      rows = sortRowsBySpecs(rows, specs);
     }
 
     return {
       ok: true,
-      table: {
-        columns:   [...resolvedGroupBy.map((c) => c.displayKey), ...measures.map((m) => m.name)],
-        rows:      resultRows,
-        elapsedMs: elapsed(),
-      },
+      table: { columns, rows, elapsedMs: elapsed() },
     };
 
   } catch (e) {
@@ -1011,8 +1284,6 @@ export function evaluateTable(
     });
   }
 }
-
-
 
 
 
