@@ -39,19 +39,14 @@ export interface SemanticTable {
 // ── Relationship ──────────────────────────────────────────────
 
 export interface SemanticRelationship {
-  sourceTable: string;
+  sourceTable:  string;
   sourceColumn: string;
-
-  targetTable: string;
+  targetTable:  string;
   targetColumn: string;
-
-  confidence: number;
-
-  cardinality:
-    | "OneToOne"
-    | "OneToMany"
-    | "ManyToOne"
-    | "ManyToMany";
+  /** Confidence score from relationship inference (0–1). Optional. */
+  confidence?:  number;
+  /** Relationship cardinality, e.g. "many-to-one" | "one-to-one". Optional. */
+  cardinality?: string;
 }
 
 // ── Measure ───────────────────────────────────────────────────

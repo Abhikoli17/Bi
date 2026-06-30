@@ -7,6 +7,7 @@ import type {
   DataRow,
   MeasureDefinition,
   SemanticModel,
+  SemanticRelationship,
   SemanticTable,
 } from "./types.js";
 
@@ -60,7 +61,7 @@ export interface DaxResult {
 }
 
 export interface DaxError {
-  code: "UNKNOWN_TABLE" | "UNKNOWN_COLUMN" | "PARSE_ERROR";
+  code: "UNKNOWN_TABLE" | "UNKNOWN_COLUMN" | "PARSE_ERROR" | "NO_RELATIONSHIP";
   message: string;
   expression?: string;
 }
@@ -365,7 +366,182 @@ function resolveColumn(
 }
 
 // ─────────────────────────────────────────────────────────────
-// §9  MODEL-LEVEL EVALUATOR
+// §8b  RELATIONSHIP RESOLUTION  (RELATED)
+//
+//  Three public-facing capabilities built here:
+//
+//  1. relatedValue(model, sourceTable, sourceRow, targetTable, col)
+//     Row-level scalar lookup — the equivalent of DAX's RELATED().
+//     Traverses one relationship hop and returns a single cell value.
+//
+//  2. expandRowsWithRelated(model, sourceTable, rows, neededRefs)
+//     Used by runSummarizeColumns to join related dimension columns
+//     onto every source row before grouping — the foundation that lets
+//     SUMMARIZECOLUMNS(Products[Name], "Total", SUM(Sales[Amount]))
+//     work across tables without needing an explicit JOIN syntax.
+//
+//  3. findRelationship(model, sourceTable, targetTable)
+//     Internal utility — locates a relationship by source/target name,
+//     case-insensitively, trying both directions.
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Find a relationship between two tables, trying both directions.
+ * Returns the relationship in normalised form (sourceTable → targetTable)
+ * regardless of which direction it was originally stored.
+ */
+function findRelationship(
+  model:       SemanticModel,
+  tableA:      string,
+  tableB:      string
+): SemanticRelationship | null {
+  const a = tableA.toLowerCase();
+  const b = tableB.toLowerCase();
+
+  for (const rel of model.relationships) {
+    const src = rel.sourceTable.toLowerCase();
+    const tgt = rel.targetTable.toLowerCase();
+
+    if (src === a && tgt === b) return rel;
+    if (src === b && tgt === a) {
+      // Flip to normalise direction: always return sourceTable = tableA
+      return {
+        sourceTable:  rel.targetTable,
+        sourceColumn: rel.targetColumn,
+        targetTable:  rel.sourceTable,
+        targetColumn: rel.sourceColumn,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Look up a single column value from a related table for one source row.
+ *
+ * Equivalent to DAX's RELATED() function.
+ *
+ * @param model         The semantic model (must include relationships[]).
+ * @param sourceTableName  Name of the table containing `sourceRow`.
+ * @param sourceRow     The fact-table row to look up from.
+ * @param targetTableName  Name of the related (dimension) table.
+ * @param targetColumnName Column on the target table whose value to return.
+ * @returns             The cell value, null if no match, or a DaxError.
+ *
+ * @example
+ * // Given Sales[ProductID] → Products[ProductID] relationship:
+ * relatedValue(model, "Sales", salesRow, "Products", "Name")
+ * // → "Widget A"
+ */
+export function relatedValue(
+  model:            SemanticModel,
+  sourceTableName:  string,
+  sourceRow:        DataRow,
+  targetTableName:  string,
+  targetColumnName: string
+): DaxScalar | DaxError {
+  // Validate source table
+  const sourceTable = resolveTable(model, sourceTableName);
+  if ("code" in sourceTable) return sourceTable;
+
+  // Find the relationship (either direction)
+  const rel = findRelationship(model, sourceTableName, targetTableName);
+  if (!rel) {
+    return {
+      code:    "NO_RELATIONSHIP",
+      message:
+        `No relationship found between "${sourceTableName}" and "${targetTableName}". ` +
+        `Define one in model.relationships.`,
+    };
+  }
+
+  // Validate target table
+  const targetTable = resolveTable(model, rel.targetTable);
+  if ("code" in targetTable) return targetTable;
+
+  // Resolve the join key on the source row
+  const srcJoinCol = resolveColumn(model, sourceTable.name, rel.sourceColumn);
+  if ("code" in srcJoinCol) return srcJoinCol;
+
+  // Resolve the join key on the target table
+  const tgtJoinCol = resolveColumn(model, targetTable.name, rel.targetColumn);
+  if ("code" in tgtJoinCol) return tgtJoinCol;
+
+  // Resolve the output column on the target table
+  const tgtOutputCol = resolveColumn(model, targetTable.name, targetColumnName);
+  if ("code" in tgtOutputCol) return tgtOutputCol;
+
+  // Match rows
+  const srcValue = sourceRow[srcJoinCol.columnKey];
+  const matchedRow = targetTable.rows.find(
+    (r) =>
+      JSON.stringify(r[tgtJoinCol.columnKey] ?? null) ===
+      JSON.stringify(srcValue ?? null)
+  );
+
+  return (matchedRow?.[tgtOutputCol.columnKey] ?? null) as DaxScalar;
+}
+
+/**
+ * Describes one related column that needs to be joined onto source rows.
+ * Built by runSummarizeColumns when it detects a group-by column that
+ * belongs to a different table than the source fact table.
+ */
+interface RelatedRef {
+  /** The dimension table to join from. */
+  targetTableName:  string;
+  /** The exact-cased column key on the target table to read. */
+  targetColKey:     string;
+  /** The key this value will be written under on the expanded row. */
+  writeKey:         string;
+  /** Resolved join columns, pre-computed once for all rows. */
+  srcJoinKey:       string;
+  tgtJoinKey:       string;
+  targetTable:      SemanticTable;
+}
+
+/**
+ * Join related dimension columns onto every source row, returning a new
+ * expanded row array. Only the columns listed in `neededRefs` are joined —
+ * we never load more than necessary.
+ *
+ * Unmatched rows get `null` for related columns (left-join semantics —
+ * Power BI drops unmatched fact rows in SUMMARIZECOLUMNS, but keeping them
+ * here prevents silent data loss and matches BLANK() semantics for measures).
+ */
+function expandRowsWithRelated(
+  rows:       DataRow[],
+  refs:       RelatedRef[]
+): DataRow[] {
+  if (refs.length === 0) return rows;
+
+  // Build a lookup map per target table for O(1) row matching
+  const lookups = new Map<string, Map<string, DataRow>>();
+  for (const ref of refs) {
+    if (!lookups.has(ref.targetTableName)) {
+      const map = new Map<string, DataRow>();
+      for (const row of ref.targetTable.rows) {
+        const key = JSON.stringify(row[ref.tgtJoinKey] ?? null);
+        if (!map.has(key)) map.set(key, row); // first match wins (PK semantics)
+      }
+      lookups.set(ref.targetTableName, map);
+    }
+  }
+
+  return rows.map((row) => {
+    const expanded: DataRow = { ...row };
+    for (const ref of refs) {
+      const lookup     = lookups.get(ref.targetTableName)!;
+      const joinVal    = JSON.stringify(row[ref.srcJoinKey] ?? null);
+      const matchedRow = lookup.get(joinVal);
+      expanded[ref.writeKey] = (matchedRow?.[ref.targetColKey] ?? null) as DaxScalar;
+    }
+    return expanded;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+
 //     Resolves table + column, applies filter context, then calls
 //     aggregators directly. Never throws — returns DaxEvalResult.
 // ─────────────────────────────────────────────────────────────
@@ -854,10 +1030,10 @@ function groupRowsByColumns(
 
 // ─────────────────────────────────────────────────────────────
 // §21  SUMMARIZECOLUMNS CORE EVALUATOR
-//      Resolves the source table, group-by columns, and measures,
-//      then builds one result row per group. No EVALUATE / ORDER BY
-//      handling here — that's layered on by evaluateTable() and
-//      runTopN() so this core can be reused by both.
+//      Resolves the source table, group-by columns (local + related),
+//      and measures, then builds one result row per group.
+//      Cross-table group-bys are handled by joining related dimension
+//      columns onto the source rows before partitioning.
 // ─────────────────────────────────────────────────────────────
 
 interface TableCore {
@@ -879,18 +1055,34 @@ function runSummarizeColumns(
 
   const { tableContext, groupByCols, measures } = parsed;
 
-  // ── Determine source table ────────────────────────────────
-  // Priority: groupBy col's table → tableContext string → inferred from measures
-  let sourceTableName: string | null =
-    groupByCols[0]?.tableName
-    ?? tableContext
-    ?? null;
+  // ── Determine source (fact) table ─────────────────────────
+  // Priority order:
+  //   1. A group-by column on the source table itself
+  //   2. A bare table-context string arg: "Sales"
+  //   3. A Table[Column] reference inside a measure
+  //   4. A bare COUNTROWS(Table) — has no '[' so TABLE_NAME_RE won't match
+  //
+  // We can't rely on groupByCols[0].tableName here because that column
+  // might be from a *related* dimension table (e.g. Products[Name]).
+  // We'll determine which tables are related after we have a candidate.
+
+  let sourceTableName: string | null = tableContext ?? null;
 
   if (!sourceTableName) {
+    // TABLE_NAME_RE matches Table[Column] style — covers SUM/AVERAGE/MIN/MAX
+    const COUNTROWS_ONLY_RE = /^COUNTROWS\s*\(\s*([A-Za-z_][\w\s]*)\s*\)$/i;
     for (const m of measures) {
-      const match = m.expression.match(TABLE_NAME_RE);
-      if (match) { sourceTableName = match[1].trim(); break; }
+      const bracketMatch = m.expression.match(TABLE_NAME_RE);
+      if (bracketMatch) { sourceTableName = bracketMatch[1].trim(); break; }
+      const countrowsMatch = m.expression.match(COUNTROWS_ONLY_RE);
+      if (countrowsMatch) { sourceTableName = countrowsMatch[1].trim(); break; }
     }
+  }
+
+  if (!sourceTableName && groupByCols.length > 0) {
+    // Last resort: use the first group-by column's table. This is only
+    // correct when all group-bys are on the same (fact) table.
+    sourceTableName = groupByCols[0].tableName;
   }
 
   if (!sourceTableName) {
@@ -909,20 +1101,96 @@ function runSummarizeColumns(
   if ("code" in tableOrErr) return { ok: false, error: tableOrErr };
   const sourceTable = tableOrErr;
 
-  // ── Resolve group-by columns (case-insensitive) ───────────
-  const resolvedGroupBy: Array<{ colKey: string; displayKey: string }> = [];
+  // ── Classify group-by columns: local vs related ───────────
+  // A group-by column is "local" if its table matches the source table.
+  // It is "related" if there is a relationship from the source table to
+  // that column's table. Anything else is an error.
+
+  const localGroupBy:   Array<{ colKey: string; displayKey: string }> = [];
+  const relatedGroupBy: Array<{ ref: RelatedRef; displayKey: string }> = [];
+
   for (const col of groupByCols) {
-    const r = resolveColumn(model, col.tableName, col.columnName);
-    if ("code" in r) return { ok: false, error: r };
-    resolvedGroupBy.push({ colKey: r.columnKey, displayKey: col.displayKey });
+    const isLocal =
+      col.tableName.toLowerCase() === sourceTable.name.toLowerCase();
+
+    if (isLocal) {
+      const r = resolveColumn(model, sourceTable.name, col.columnName);
+      if ("code" in r) return { ok: false, error: r };
+      localGroupBy.push({ colKey: r.columnKey, displayKey: col.displayKey });
+    } else {
+      // Cross-table — find the relationship
+      const rel = findRelationship(model, sourceTable.name, col.tableName);
+      if (!rel) {
+        return {
+          ok: false,
+          error: {
+            code:    "NO_RELATIONSHIP",
+            message:
+              `No relationship found between "${sourceTable.name}" and "${col.tableName}". ` +
+              `Define one in model.relationships, or check table names.`,
+          },
+        };
+      }
+
+      // Resolve all three columns we need:
+      //  srcJoinKey  — source table's FK (e.g. Sales.ProductID)
+      //  tgtJoinKey  — target table's PK (e.g. Products.ProductID)
+      //  targetColKey — target column requested for grouping (e.g. Products.Name)
+      const tgtTable = resolveTable(model, rel.targetTable);
+      if ("code" in tgtTable) return { ok: false, error: tgtTable };
+
+      const srcJoin = resolveColumn(model, sourceTable.name, rel.sourceColumn);
+      if ("code" in srcJoin) return { ok: false, error: srcJoin };
+
+      const tgtJoin = resolveColumn(model, tgtTable.name, rel.targetColumn);
+      if ("code" in tgtJoin) return { ok: false, error: tgtJoin };
+
+      const tgtCol = resolveColumn(model, tgtTable.name, col.columnName);
+      if ("code" in tgtCol) return { ok: false, error: tgtCol };
+
+      // writeKey is a synthetic column key on the expanded row
+      const writeKey = `__related__${tgtTable.name}__${tgtCol.columnKey}`;
+
+      relatedGroupBy.push({
+        displayKey: col.displayKey,
+        ref: {
+          targetTableName: tgtTable.name,
+          targetColKey:    tgtCol.columnKey,
+          writeKey,
+          srcJoinKey:      srcJoin.columnKey,
+          tgtJoinKey:      tgtJoin.columnKey,
+          targetTable:     tgtTable,
+        },
+      });
+    }
   }
 
-  // ── Apply outer filter context ────────────────────────────
+  // ── Apply outer filter context then expand related columns ─
   const filteredRows = applyFilter(sourceTable.rows, sourceTable.name, filter);
+  const expanded     = expandRowsWithRelated(
+    filteredRows,
+    relatedGroupBy.map((r) => r.ref)
+  );
 
-  // ── Partition rows into groups ────────────────────────────
-  const colKeys = resolvedGroupBy.map((c) => c.colKey);
-  const groups  = groupRowsByColumns(filteredRows, colKeys);
+  // ── Build composite group-by key list ─────────────────────
+  // Combines local column keys and related write keys in declaration order.
+  const allGroupByKeys: Array<{ readKey: string; displayKey: string }> = [
+    ...localGroupBy.map((c) => ({ readKey: c.colKey,      displayKey: c.displayKey })),
+    ...relatedGroupBy.map((r) => ({ readKey: r.ref.writeKey, displayKey: r.displayKey })),
+  ];
+
+  // Re-sort to match original declaration order
+  const orderedKeys = groupByCols.map((col) => {
+    const local   = localGroupBy.find((c) => c.displayKey === col.displayKey);
+    const related = relatedGroupBy.find((r) => r.displayKey === col.displayKey);
+    if (local)   return { readKey: local.colKey,        displayKey: local.displayKey };
+    if (related) return { readKey: related.ref.writeKey, displayKey: related.displayKey };
+    return { readKey: col.columnName, displayKey: col.displayKey };
+  });
+
+  // ── Partition expanded rows into groups ───────────────────
+  const colReadKeys = orderedKeys.map((k) => k.readKey);
+  const groups      = groupRowsByColumns(expanded, colReadKeys);
 
   // ── Build one result row per group ────────────────────────
   const resultRows: DataRow[] = [];
@@ -930,32 +1198,42 @@ function runSummarizeColumns(
   for (const [, groupRows] of groups) {
     const row: DataRow = {};
 
-    // Group-by column values (constant within a group — read from first row)
-    for (const col of resolvedGroupBy) {
-      row[col.displayKey] = groupRows[0]?.[col.colKey] ?? null;
+    // Group-by values: read from the first row of each group
+    for (const key of orderedKeys) {
+      row[key.displayKey] = groupRows[0]?.[key.readKey] ?? null;
     }
 
-    // Measure values — each evaluated over the current group's row set
+    // Measures: evaluated against the original (un-expanded) source rows
+    // for the group — the expansion was only needed for grouping.
+    // We re-filter from `expanded` (which has the write keys) but use
+    // evaluateDaxExpression with the underlying source column names,
+    // so the measure sees the same DataRow shape as always.
     for (const measure of measures) {
-      // COUNTROWS() with no argument → row count of the current group.
-      // This matches Power BI behaviour: the "current row context" table.
       if (/^COUNTROWS\s*\(\s*\)$/i.test(measure.expression)) {
         row[measure.name] = groupRows.length;
       } else {
-        row[measure.name] = evaluateDaxExpression(measure.expression, groupRows);
+        // Strip synthetic __related__ keys before passing to the evaluator
+        // so column lookups in the measure still work correctly.
+        const cleanRows = groupRows.map((r) => {
+          const clean: DataRow = {};
+          for (const [k, v] of Object.entries(r)) {
+            if (!k.startsWith("__related__")) clean[k] = v;
+          }
+          return clean;
+        });
+        row[measure.name] = evaluateDaxExpression(measure.expression, cleanRows);
       }
     }
 
     resultRows.push(row);
   }
 
-  // ── Default sort: by group-by column values (stable, ascending) ──
-  // Overridden by ORDER BY / TOPN when present.
-  if (resolvedGroupBy.length > 0) {
+  // ── Default sort: ascending by group-by display keys ─────
+  if (orderedKeys.length > 0) {
     resultRows.sort((a, b) => {
-      for (const col of resolvedGroupBy) {
-        const av = String(a[col.displayKey] ?? "");
-        const bv = String(b[col.displayKey] ?? "");
+      for (const key of orderedKeys) {
+        const av = String(a[key.displayKey] ?? "");
+        const bv = String(b[key.displayKey] ?? "");
         if (av < bv) return -1;
         if (av > bv) return  1;
       }
@@ -966,7 +1244,7 @@ function runSummarizeColumns(
   return {
     ok: true,
     table: {
-      columns: [...resolvedGroupBy.map((c) => c.displayKey), ...measures.map((m) => m.name)],
+      columns: [...orderedKeys.map((k) => k.displayKey), ...measures.map((m) => m.name)],
       rows:    resultRows,
     },
   };
